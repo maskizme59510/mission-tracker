@@ -21,7 +21,9 @@ export default async function DashboardPage() {
       supabase.from("mission_health_view").select("*", { count: "exact", head: true }).eq("is_follow_up_overdue", true),
       supabase
         .from("admin_notifications")
-        .select("id,title,message,created_at,read_at")
+        .select(
+          "id,title,message,created_at,read_at,report_id,report:mission_reports(type,mission:missions(consultant_first_name,consultant_last_name,client_name))",
+        )
         .is("read_at", null)
         .order("created_at", { ascending: false })
         .limit(5),
@@ -113,8 +115,20 @@ export default async function DashboardPage() {
           <div className="mt-3 space-y-2">
             {notifications.map((notification) => (
               <div key={notification.id} className="rounded-md border border-slate-200 p-3">
-                <p className="text-sm font-medium text-slate-900">{notification.title}</p>
-                <p className="text-sm text-slate-700">{notification.message}</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {(() => {
+                    const reportType = notification.report?.type === "kickoff" ? "Démarrage" : "Suivi";
+                    const consultantFirstName = notification.report?.mission?.consultant_first_name ?? "";
+                    const consultantLastName = notification.report?.mission?.consultant_last_name ?? "";
+                    const clientName = notification.report?.mission?.client_name ?? "";
+                    const fullName = `${consultantFirstName} ${consultantLastName}`.trim();
+                    const eventDate = toFrenchDate(notification.created_at);
+                    if (!fullName || !clientName) {
+                      return `${notification.title} - ${eventDate}`;
+                    }
+                    return `✅ CR ${reportType} validé par ${fullName} - ${clientName} - ${eventDate}`;
+                  })()}
+                </p>
                 <p className="mt-1 text-xs text-slate-500">{toFrenchDate(notification.created_at)}</p>
               </div>
             ))}
