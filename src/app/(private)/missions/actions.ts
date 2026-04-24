@@ -78,32 +78,48 @@ export async function createMissionAction(formData: FormData) {
 }
 
 export async function createFollowupReportAction(formData: FormData) {
-  const { supabase, user } = await requireAdminSession();
-
   const missionId = String(formData.get("mission_id") ?? "");
-  const reportDate = String(formData.get("report_date") ?? "");
-  const lastFollowupDate = String(formData.get("last_followup_date") ?? "");
-  const nextFollowupDate = String(formData.get("next_followup_date") ?? "");
 
-  if (!missionId || !reportDate) {
-    throw new Error("mission_id et report_date sont obligatoires.");
+  if (!missionId) {
+    redirect("/missions?createReport=error");
   }
 
-  const { error } = await supabase.from("mission_reports").insert({
-    mission_id: missionId,
-    type: "followup",
-    report_date: reportDate,
-    last_followup_date: lastFollowupDate || null,
-    next_followup_date: nextFollowupDate || null,
-    status: "draft",
-    created_by: user.id,
-  });
+  try {
+    const { supabase, user } = await requireAdminSession();
+    const reportDate = new Date().toISOString().slice(0, 10);
 
-  if (error) {
-    throw new Error(error.message);
+    const { data: latestReport } = await supabase
+      .from("mission_reports")
+      .select("report_date")
+      .eq("mission_id", missionId)
+      .order("report_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: createdReport, error: createError } = await supabase
+      .from("mission_reports")
+      .insert({
+        mission_id: missionId,
+        type: "followup",
+        report_date: reportDate,
+        last_followup_date: latestReport?.report_date ?? null,
+        next_followup_date: null,
+        status: "draft",
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+
+    if (createError || !createdReport) {
+      throw new Error(createError?.message ?? "Impossible de creer le CR de suivi.");
+    }
+
+    revalidatePath(`/missions/${missionId}`);
+    redirect(`/reports/${createdReport.id}/edit`);
+  } catch {
+    redirect(`/missions/${missionId}?createReport=error`);
   }
-
-  revalidatePath(`/missions/${missionId}`);
 }
 
 export async function deleteMissionAction(formData: FormData) {
@@ -147,8 +163,9 @@ export async function updateMissionIdentityAction(formData: FormData) {
   const consultantFirstName = String(formData.get("consultant_first_name") ?? "").trim();
   const consultantLastName = String(formData.get("consultant_last_name") ?? "").trim();
   const clientName = String(formData.get("client_name") ?? "").trim();
+  const startDate = String(formData.get("start_date") ?? "").trim();
 
-  if (!missionId || !consultantFirstName || !consultantLastName || !clientName) {
+  if (!missionId || !consultantFirstName || !consultantLastName || !clientName || !startDate) {
     throw new Error("Tous les champs de modification mission sont obligatoires.");
   }
 
@@ -158,6 +175,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
       consultant_first_name: consultantFirstName,
       consultant_last_name: consultantLastName,
       client_name: clientName,
+      start_date: startDate,
     })
     .eq("id", missionId);
 

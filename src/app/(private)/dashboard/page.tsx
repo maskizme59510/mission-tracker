@@ -117,10 +117,12 @@ export default async function DashboardPage() {
               <div key={notification.id} className="rounded-md border border-slate-200 p-3">
                 <p className="text-sm font-medium text-slate-900">
                   {(() => {
-                    const reportType = notification.report?.type === "kickoff" ? "Démarrage" : "Suivi";
-                    const consultantFirstName = notification.report?.mission?.consultant_first_name ?? "";
-                    const consultantLastName = notification.report?.mission?.consultant_last_name ?? "";
-                    const clientName = notification.report?.mission?.client_name ?? "";
+                    const report = Array.isArray(notification.report) ? notification.report[0] : notification.report;
+                    const mission = Array.isArray(report?.mission) ? report.mission[0] : report?.mission;
+                    const reportType = report?.type === "kickoff" ? "Démarrage" : "Suivi";
+                    const consultantFirstName = mission?.consultant_first_name ?? "";
+                    const consultantLastName = mission?.consultant_last_name ?? "";
+                    const clientName = mission?.client_name ?? "";
                     const fullName = `${consultantFirstName} ${consultantLastName}`.trim();
                     const eventDate = toFrenchDate(notification.created_at);
                     if (!fullName || !clientName) {

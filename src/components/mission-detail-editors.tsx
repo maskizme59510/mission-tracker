@@ -7,6 +7,7 @@ type MissionIdentityEditorProps = {
   initialConsultantFirstName: string;
   initialConsultantLastName: string;
   initialClientName: string;
+  initialStartDate: string;
   action: (formData: FormData) => void | Promise<void>;
 };
 
@@ -22,6 +23,7 @@ export function MissionIdentityEditor({
   initialConsultantFirstName,
   initialConsultantLastName,
   initialClientName,
+  initialStartDate,
   action,
 }: Readonly<MissionIdentityEditorProps>) {
   const [editing, setEditing] = useState(false);
@@ -42,7 +44,7 @@ export function MissionIdentityEditor({
   return (
     <form action={action} className="mt-4 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
       <input type="hidden" name="mission_id" value={missionId} />
-      <div className="grid gap-2 md:grid-cols-3">
+      <div className="grid gap-2 md:grid-cols-2">
         <input
           name="consultant_first_name"
           defaultValue={initialConsultantFirstName}
@@ -63,6 +65,13 @@ export function MissionIdentityEditor({
           required
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           placeholder="Nom de l'enseigne"
+        />
+        <input
+          name="start_date"
+          type="date"
+          defaultValue={initialStartDate}
+          required
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
       <div className="flex gap-2">

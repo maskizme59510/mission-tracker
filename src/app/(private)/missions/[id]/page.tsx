@@ -40,8 +40,32 @@ function statusMeta(status: Report["status"]) {
   return { label: "Transmis au client", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
 }
 
-export default async function MissionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function missionDurationLabel(startDate: string) {
+  const start = new Date(startDate);
+  const now = new Date();
+  const totalMonths = Math.max(
+    0,
+    (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()),
+  );
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+
+  if (years < 1) {
+    return `En mission depuis ${months} mois`;
+  }
+
+  return `En mission depuis ${years} an(s) et ${months} mois`;
+}
+
+export default async function MissionDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ createReport?: string }>;
+}) {
   const { id } = await params;
+  const { createReport } = await searchParams;
   const { supabase } = await requireAdminSession();
 
   const { data: mission, error: missionError } = await supabase
@@ -63,7 +87,6 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
   const typedReports = (reports ?? []) as Report[];
 
   const latestReport = typedReports[0];
-  const defaultReportDate = new Date().toISOString().slice(0, 10);
   const lastValidatedReport = typedReports.find((report) => report.status === "validated" || report.status === "sent_to_client");
   const nextPlannedDate = latestReport?.next_followup_date ?? null;
 
@@ -83,12 +106,12 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
             initialConsultantFirstName={typedMission.consultant_first_name}
             initialConsultantLastName={typedMission.consultant_last_name}
             initialClientName={typedMission.client_name}
+            initialStartDate={typedMission.start_date}
             action={updateMissionIdentityAction}
           />
         </div>
-        <p className="mt-1 text-slate-600">
-          Debut mission : {toFrenchDate(typedMission.start_date)} - Frequence : {typedMission.follow_up_frequency_days} jours
-        </p>
+        <p className="mt-1 text-slate-600">Debut mission : {toFrenchDate(typedMission.start_date)}</p>
+        <p className="text-slate-600">{missionDurationLabel(typedMission.start_date)}</p>
         <form action={deleteMissionAction} className="mt-4">
           <input type="hidden" name="mission_id" value={typedMission.id} />
           <DeleteMissionButton />
@@ -124,30 +147,19 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
 
       <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">Creer un CR de suivi</h3>
-        <form action={createFollowupReportAction} className="mt-4 grid gap-3 md:grid-cols-4">
+        {createReport === "success" ? (
+          <p className="mt-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">✅ CR de suivi cree avec succes.</p>
+        ) : null}
+        {createReport === "error" ? (
+          <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            ❌ Erreur lors de la creation du CR. Verifie la base Supabase (next_followup_date nullable) puis reessaie.
+          </p>
+        ) : null}
+        <form action={createFollowupReportAction} className="mt-4">
           <input type="hidden" name="mission_id" value={typedMission.id} />
-          <label className="text-sm text-slate-700">
-            Date du CR
-            <input name="report_date" type="date" required defaultValue={defaultReportDate} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
-          </label>
-          <label className="text-sm text-slate-700">
-            Dernier suivi
-            <input
-              name="last_followup_date"
-              type="date"
-              defaultValue={latestReport?.report_date ?? typedMission.start_date}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            />
-          </label>
-          <label className="text-sm text-slate-700">
-            Prochain suivi
-            <input name="next_followup_date" type="date" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
-          </label>
-          <div className="flex items-end">
-            <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
-              Creer CR suivi
-            </button>
-          </div>
+          <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+            Creer un nouveau CR
+          </button>
         </form>
       </article>
 
