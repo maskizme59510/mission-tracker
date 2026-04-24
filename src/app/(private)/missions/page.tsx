@@ -118,7 +118,7 @@ export default async function MissionsPage() {
             type="submit"
             className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 md:col-span-2 md:w-fit"
           >
-            Creer la mission (avec CR de demarrage)
+            Valider
           </button>
         </form>
       </article>

@@ -47,32 +47,15 @@ export async function createMissionAction(formData: FormData) {
       start_date: startDate,
       follow_up_frequency_days: Number.isFinite(frequency) && frequency > 0 ? frequency : 90,
     })
-    .select("id, start_date, follow_up_frequency_days")
+    .select("id")
     .single();
 
   if (missionError || !mission) {
     throw new Error(missionError?.message ?? "Erreur de creation de mission.");
   }
 
-  const { data: report, error: reportError } = await supabase
-    .from("mission_reports")
-    .insert({
-      mission_id: mission.id,
-      type: "kickoff",
-      report_date: mission.start_date,
-      last_followup_date: lastFollowupDate || null,
-      next_followup_date: nextFollowupDate || null,
-      status: "draft",
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-
-  if (reportError || !report) {
-    throw new Error(reportError?.message ?? "Mission creee, mais erreur sur le CR de demarrage.");
-  }
-
   revalidatePath("/missions");
+  redirect(`/missions/${mission.id}`);
 }
 
 export async function createFollowupReportAction(formData: FormData) {
