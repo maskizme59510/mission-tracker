@@ -72,6 +72,16 @@ export default async function DashboardPage() {
       };
     })
     .sort((a, b) => a.priority - b.priority);
+  const alertsByClient = alerts.reduce<Record<string, (typeof alerts)[number][]>>((accumulator, alert) => {
+    const key = alert.client_name || "Enseigne non renseignee";
+    if (!accumulator[key]) {
+      accumulator[key] = [];
+    }
+    accumulator[key].push(alert);
+    return accumulator;
+  }, {});
+
+  const sortedClientNames = Object.keys(alertsByClient).sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
 
   return (
     <section className="space-y-6">
@@ -118,20 +128,29 @@ export default async function DashboardPage() {
         {alerts.length === 0 ? (
           <p className="mt-3 text-sm text-slate-600">Aucune mission a afficher.</p>
         ) : (
-          <div className="mt-3 space-y-2">
-            {alerts.map((alert) => (
-              <div key={alert.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">
-                    {alert.consultant_first_name} {alert.consultant_last_name} - {alert.client_name}
-                  </p>
-                  <p className="text-xs text-slate-600">Prochain suivi: {toFrenchDate(alert.next_followup_date)}</p>
+          <div className="mt-3 space-y-3">
+            {sortedClientNames.map((clientName) => (
+              <div key={clientName} className="rounded-lg border border-slate-200">
+                <div className="border-b border-slate-200 bg-slate-50 px-4 py-2">
+                  <p className="text-sm font-semibold text-slate-900">{clientName}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-full border px-2 py-1 text-xs font-medium ${alert.classes}`}>{alert.label}</span>
-                  <Link href={`/missions/${alert.mission_id}`} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100">
-                    Ouvrir
-                  </Link>
+                <div className="space-y-2 p-3">
+                  {alertsByClient[clientName].map((alert) => (
+                    <div key={alert.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">
+                          {alert.consultant_first_name} {alert.consultant_last_name}
+                        </p>
+                        <p className="text-xs text-slate-600">Prochain suivi: {toFrenchDate(alert.next_followup_date)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full border px-2 py-1 text-xs font-medium ${alert.classes}`}>{alert.label}</span>
+                        <Link href={`/missions/${alert.mission_id}`} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100">
+                          Ouvrir
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

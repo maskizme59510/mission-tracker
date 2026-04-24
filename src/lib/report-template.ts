@@ -3,7 +3,7 @@ type ReportTemplateInput = {
   missionStartDate: string;
   lastFollowupDate: string | null;
   reportDate: string;
-  nextFollowupDate: string;
+  nextFollowupDate: string | null;
   participants: string[];
   consultantFeedback: string[];
   clientFeedback: string[];
@@ -37,7 +37,7 @@ export function buildReportBody(input: ReportTemplateInput) {
     `Demarrage : ${input.missionStartDate}`,
     `Dernier suivi de mission : ${input.lastFollowupDate ?? "-"}`,
     `Date suivi de mission : ${input.reportDate}`,
-    `Prochain suivi de mission planifie le : ${input.nextFollowupDate}`,
+    `Prochain suivi de mission planifie le : ${input.nextFollowupDate ?? "-"}`,
     "",
     lines("Presents :", input.participants),
     "",

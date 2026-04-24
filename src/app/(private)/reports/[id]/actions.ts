@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
 import { toLines } from "@/lib/format";
 import { buildEmailIntro, buildReportBody } from "@/lib/report-template";
@@ -10,57 +11,62 @@ const sections = ["consultant_feedback", "client_feedback", "next_objectives", "
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function updateReportAction(formData: FormData) {
-  const { supabase } = await requireAdminSession();
   const reportId = String(formData.get("report_id") ?? "");
   const missionId = String(formData.get("mission_id") ?? "");
 
   if (!reportId || !missionId) {
-    throw new Error("report_id et mission_id sont obligatoires.");
+    redirect(`/reports/${reportId}/edit?save=error`);
   }
 
-  const payload = {
-    report_date: String(formData.get("report_date") ?? ""),
-    last_followup_date: String(formData.get("last_followup_date") ?? "") || null,
-    next_followup_date: String(formData.get("next_followup_date") ?? ""),
-    status: String(formData.get("status") ?? "draft"),
-  };
+  try {
+    const { supabase } = await requireAdminSession();
+    const payload = {
+      report_date: String(formData.get("report_date") ?? ""),
+      last_followup_date: String(formData.get("last_followup_date") ?? "") || null,
+    next_followup_date: String(formData.get("next_followup_date") ?? "") || null,
+      status: String(formData.get("status") ?? "draft"),
+    };
 
-  const { error: reportError } = await supabase.from("mission_reports").update(payload).eq("id", reportId);
-  if (reportError) throw new Error(reportError.message);
+    const { error: reportError } = await supabase.from("mission_reports").update(payload).eq("id", reportId);
+    if (reportError) throw new Error(reportError.message);
 
-  await supabase.from("report_participants").delete().eq("report_id", reportId);
-  const participants = toLines(String(formData.get("participants") ?? ""));
-  if (participants.length > 0) {
-    const { error: participantsError } = await supabase.from("report_participants").insert(
-      participants.map((name, position) => ({
-        report_id: reportId,
-        name,
-        role_label: "Participant",
-        position,
-      })),
-    );
-    if (participantsError) throw new Error(participantsError.message);
+    await supabase.from("report_participants").delete().eq("report_id", reportId);
+    const participants = toLines(String(formData.get("participants") ?? ""));
+    if (participants.length > 0) {
+      const { error: participantsError } = await supabase.from("report_participants").insert(
+        participants.map((name, position) => ({
+          report_id: reportId,
+          name,
+          role_label: "Participant",
+          position,
+        })),
+      );
+      if (participantsError) throw new Error(participantsError.message);
+    }
+
+    await supabase.from("report_sections_items").delete().eq("report_id", reportId);
+
+    for (const section of sections) {
+      const values = toLines(String(formData.get(section) ?? ""));
+      if (values.length === 0) continue;
+      const { error } = await supabase.from("report_sections_items").insert(
+        values.map((content, position) => ({
+          report_id: reportId,
+          section_type: section,
+          content,
+          position,
+        })),
+      );
+      if (error) throw new Error(error.message);
+    }
+
+    revalidatePath(`/reports/${reportId}/edit`);
+    revalidatePath(`/missions/${missionId}`);
+    revalidatePath("/missions");
+    redirect(`/reports/${reportId}/edit?save=success`);
+  } catch {
+    redirect(`/reports/${reportId}/edit?save=error`);
   }
-
-  await supabase.from("report_sections_items").delete().eq("report_id", reportId);
-
-  for (const section of sections) {
-    const values = toLines(String(formData.get(section) ?? ""));
-    if (values.length === 0) continue;
-    const { error } = await supabase.from("report_sections_items").insert(
-      values.map((content, position) => ({
-        report_id: reportId,
-        section_type: section,
-        content,
-        position,
-      })),
-    );
-    if (error) throw new Error(error.message);
-  }
-
-  revalidatePath(`/reports/${reportId}/edit`);
-  revalidatePath(`/missions/${missionId}`);
-  revalidatePath("/missions");
 }
 
 export async function sendToConsultantAction(formData: FormData) {

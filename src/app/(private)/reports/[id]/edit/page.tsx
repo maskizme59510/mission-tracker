@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
+import { SaveCrFeedback } from "@/components/save-cr-feedback";
+import { SaveCrSubmitButton } from "@/components/save-cr-submit-button";
 import { fromLines, toFrenchDate } from "@/lib/format";
-import { sendToClientAction, sendToConsultantAction, updateReportAction } from "@/app/(private)/reports/[id]/actions";
+import { sendToConsultantAction, updateReportAction } from "@/app/(private)/reports/[id]/actions";
 
 type Report = {
   id: string;
@@ -10,7 +12,7 @@ type Report = {
   type: "kickoff" | "followup";
   report_date: string;
   last_followup_date: string | null;
-  next_followup_date: string;
+  next_followup_date: string | null;
   status: "draft" | "pending_consultant_validation" | "validated" | "sent_to_client";
   consultant_last_edited_at?: string | null;
 };
@@ -27,8 +29,15 @@ type SectionItem = {
   content: string;
 };
 
-export default async function EditReportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditReportPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ save?: string }>;
+}) {
   const { id } = await params;
+  const { save } = await searchParams;
   const { supabase } = await requireAdminSession();
 
   const { data: report, error: reportError } = await supabase.from("mission_reports").select("*").eq("id", id).single();
@@ -83,6 +92,8 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
     .eq("report_id", typedReport.id)
     .order("created_at", { ascending: false });
 
+  const saveFeedbackMode = save === "success" ? "success" : save === "error" ? "error" : null;
+
   return (
     <section className="space-y-6">
       <Link href={`/missions/${typedReport.mission_id}`} className="text-sm font-medium text-slate-700 underline">
@@ -111,6 +122,7 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
       <form action={updateReportAction} className="space-y-5">
         <input type="hidden" name="report_id" value={typedReport.id} />
         <input type="hidden" name="mission_id" value={typedReport.mission_id} />
+        <SaveCrFeedback mode={saveFeedbackMode} />
 
         <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-900">Informations generales</h3>
@@ -133,8 +145,7 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
               <input
                 name="next_followup_date"
                 type="date"
-                required
-                defaultValue={typedReport.next_followup_date}
+                defaultValue={typedReport.next_followup_date ?? ""}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
               />
             </label>
@@ -197,9 +208,7 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
           </div>
         </article>
 
-        <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
-          Enregistrer le CR
-        </button>
+        <SaveCrSubmitButton />
       </form>
 
       <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -222,27 +231,6 @@ export default async function EditReportPage({ params }: { params: Promise<{ id:
             </a>
           </p>
         ) : null}
-      </article>
-
-      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold text-slate-900">Envoi au client</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          Envoie le CR au client et passe le statut en &quot;Transmis client&quot;.
-        </p>
-        <form action={sendToClientAction} className="mt-4 flex flex-wrap items-center gap-3">
-          <input type="hidden" name="report_id" value={typedReport.id} />
-          <input type="hidden" name="mission_id" value={typedReport.mission_id} />
-          <input
-            name="client_recipient_email"
-            type="email"
-            required
-            placeholder="Email destinataire client"
-            className="min-w-64 rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
-          <button type="submit" className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">
-            Envoyer au client
-          </button>
-        </form>
       </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

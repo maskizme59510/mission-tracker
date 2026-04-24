@@ -59,6 +59,21 @@ export default async function MissionsPage() {
         <form action={createMissionAction} className="mt-4 grid gap-3 md:grid-cols-2">
           <input name="consultant_first_name" required placeholder="Prenom consultant" className="rounded-md border border-slate-300 px-3 py-2" />
           <input name="consultant_last_name" required placeholder="Nom consultant" className="rounded-md border border-slate-300 px-3 py-2" />
+          <label className="text-sm text-slate-700 md:col-span-2">
+            Type de consultant
+            <select
+              name="consultant_type"
+              required
+              defaultValue=""
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+            >
+              <option value="" disabled>
+                Selectionner un type
+              </option>
+              <option value="Consultant Interne">Consultant Interne</option>
+              <option value="Consultant Externe">Consultant Externe</option>
+            </select>
+          </label>
           <input name="consultant_email" type="email" required placeholder="Email consultant" className="rounded-md border border-slate-300 px-3 py-2" />
           <input name="client_name" required placeholder="Nom de l'enseigne" className="rounded-md border border-slate-300 px-3 py-2" />
           <input
