@@ -70,7 +70,7 @@ export async function createFollowupReportAction(formData: FormData) {
   const missionId = String(formData.get("mission_id") ?? "");
 
   if (!missionId) {
-    redirect("/missions?createReport=error");
+    redirect("/missions?createReport=error&createReportError=mission_id%20manquant");
   }
 
   try {
@@ -110,8 +110,12 @@ export async function createFollowupReportAction(formData: FormData) {
 
     revalidatePath(`/missions/${missionId}`);
     redirect(`/reports/${createdReport.id}/edit`);
-  } catch {
-    redirect(`/missions/${missionId}?createReport=error`);
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Erreur inconnue lors de la creation du CR.";
+    redirect(`/missions/${missionId}?createReport=error&createReportError=${encodeURIComponent(message)}`);
   }
 }
 

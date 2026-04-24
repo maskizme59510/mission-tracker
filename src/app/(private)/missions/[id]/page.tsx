@@ -66,10 +66,10 @@ export default async function MissionDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ createReport?: string }>;
+  searchParams: Promise<{ createReport?: string; createReportError?: string }>;
 }) {
   const { id } = await params;
-  const { createReport } = await searchParams;
+  const { createReport, createReportError } = await searchParams;
   const { supabase } = await requireAdminSession();
 
   const { data: mission, error: missionError } = await supabase
@@ -162,7 +162,7 @@ export default async function MissionDetailPage({
         ) : null}
         {createReport === "error" ? (
           <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            ❌ Erreur lors de la creation du CR. Veuillez reessayer.
+            ❌ Erreur lors de la creation du CR : {createReportError ?? "Veuillez reessayer."}
           </p>
         ) : null}
         <form action={createFollowupReportAction} className="mt-4">
