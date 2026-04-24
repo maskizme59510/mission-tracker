@@ -27,7 +27,9 @@ export default async function DashboardPage() {
         .limit(5),
       supabase
         .from("mission_health_view")
-        .select("mission_id,consultant_first_name,consultant_last_name,client_name,next_followup_date,is_follow_up_overdue,is_pending_validation_over_5_days,is_follow_up_within_14_days")
+        .select(
+          "mission_id,consultant_first_name,consultant_last_name,client_name,latest_report_date,next_followup_date,is_follow_up_within_14_days",
+        )
         .order("next_followup_date", { ascending: true }),
     ]);
 
@@ -37,18 +39,25 @@ export default async function DashboardPage() {
 
   const alerts = (healthRows ?? [])
     .map((row) => {
+      const today = new Date();
+      const lastFollowupDate = row.latest_report_date ? new Date(row.latest_report_date) : null;
+      const daysSinceLastFollowup = lastFollowupDate
+        ? Math.floor((today.getTime() - lastFollowupDate.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      const delayDays = Math.max(0, daysSinceLastFollowup - 90);
+
       let priority = 4;
       let label = "🟢 Mission a jour";
       let classes = "border-emerald-200 bg-emerald-50 text-emerald-800";
 
-      if (row.is_follow_up_overdue) {
+      if (daysSinceLastFollowup > 120) {
         priority = 1;
-        label = "🔴 Suivi en retard";
+        label = `🔴 CRITIQUE - Suivi tres en retard - ${delayDays} jours de retard`;
         classes = "border-red-200 bg-red-50 text-red-800";
-      } else if (row.is_pending_validation_over_5_days) {
+      } else if (daysSinceLastFollowup > 90) {
         priority = 2;
-        label = "🟡 Validation en attente > 5 jours";
-        classes = "border-amber-200 bg-amber-50 text-amber-800";
+        label = `🟠 Suivi en retard - ${delayDays} jours de retard`;
+        classes = "border-orange-200 bg-orange-50 text-orange-800";
       } else if (row.is_follow_up_within_14_days) {
         priority = 3;
         label = "📅 Prochain suivi < 14 jours";

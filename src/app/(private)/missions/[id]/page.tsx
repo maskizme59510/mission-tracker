@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
 import { toFrenchDate } from "@/lib/format";
-import { createFollowupReportAction } from "@/app/(private)/missions/actions";
+import { DeleteMissionButton } from "@/components/delete-mission-button";
+import { createFollowupReportAction, deleteMissionAction } from "@/app/(private)/missions/actions";
 
 type Mission = {
   id: string;
@@ -61,6 +62,13 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
         </h2>
         <p className="mt-1 text-slate-600">
           Debut mission : {toFrenchDate(typedMission.start_date)} - Frequence : {typedMission.follow_up_frequency_days} jours
+        </p>
+        <form action={deleteMissionAction} className="mt-4">
+          <input type="hidden" name="mission_id" value={typedMission.id} />
+          <DeleteMissionButton />
+        </form>
+        <p className="mt-2 text-xs text-slate-500">
+          La suppression retire definitivement la mission, ses CR, participants, sections, tokens de validation et logs email associes.
         </p>
       </article>
 

@@ -34,6 +34,16 @@ export default async function MissionsPage() {
   }
 
   const missions = (data ?? []) as MissionRow[];
+  const missionsByClient = missions.reduce<Record<string, MissionRow[]>>((accumulator, mission) => {
+    const key = mission.client_name || "Enseigne non renseignee";
+    if (!accumulator[key]) {
+      accumulator[key] = [];
+    }
+    accumulator[key].push(mission);
+    return accumulator;
+  }, {});
+
+  const sortedClientNames = Object.keys(missionsByClient).sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
 
   return (
     <section className="space-y-6">
@@ -83,27 +93,45 @@ export default async function MissionsPage() {
           <p className="mt-3 text-slate-600">Aucune mission pour le moment.</p>
         ) : (
           <div className="mt-4 space-y-3">
-            {missions.map((mission) => (
-              <div key={mission.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
-                <div>
-                  <p className="font-medium text-slate-900">
-                    {mission.consultant_first_name} {mission.consultant_last_name} - {mission.client_name}
-                  </p>
-                  <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
+            {sortedClientNames.map((clientName) => (
+              <div key={clientName} className="rounded-lg border border-slate-200">
+                <div className="border-b border-slate-200 bg-slate-50 px-4 py-2">
+                  <p className="text-sm font-semibold text-slate-900">{clientName}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-full border px-2 py-1 text-xs font-medium ${badgeColor(mission.health_color)}`}>
-                    {mission.is_follow_up_overdue
-                      ? "Suivi en retard"
-                      : mission.is_pending_validation_over_5_days
-                        ? "Validation en attente > 5 jours"
-                        : mission.is_follow_up_within_14_days
-                          ? "Suivi dans moins de 14 jours"
-                          : "Mission a jour"}
-                  </span>
-                  <Link href={`/missions/${mission.mission_id}`} className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
-                    Ouvrir
-                  </Link>
+                <div className="space-y-2 p-3">
+                  {missionsByClient[clientName]
+                    .slice()
+                    .sort((a, b) =>
+                      `${a.consultant_last_name} ${a.consultant_first_name}`.localeCompare(
+                        `${b.consultant_last_name} ${b.consultant_first_name}`,
+                        "fr",
+                        { sensitivity: "base" },
+                      ),
+                    )
+                    .map((mission) => (
+                      <div key={mission.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+                        <div>
+                          <p className="font-medium text-slate-900">
+                            {mission.consultant_first_name} {mission.consultant_last_name}
+                          </p>
+                          <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`rounded-full border px-2 py-1 text-xs font-medium ${badgeColor(mission.health_color)}`}>
+                            {mission.is_follow_up_overdue
+                              ? "Suivi en retard"
+                              : mission.is_pending_validation_over_5_days
+                                ? "Validation en attente > 5 jours"
+                                : mission.is_follow_up_within_14_days
+                                  ? "Suivi dans moins de 14 jours"
+                                  : "Mission a jour"}
+                          </span>
+                          <Link href={`/missions/${mission.mission_id}`} className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
+                            Ouvrir
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             ))}

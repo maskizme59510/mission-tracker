@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
 
 function isValidEmail(value: string) {
@@ -98,4 +99,21 @@ export async function createFollowupReportAction(formData: FormData) {
   }
 
   revalidatePath(`/missions/${missionId}`);
+}
+
+export async function deleteMissionAction(formData: FormData) {
+  const { supabase } = await requireAdminSession();
+  const missionId = String(formData.get("mission_id") ?? "");
+
+  if (!missionId) {
+    throw new Error("mission_id obligatoire.");
+  }
+
+  const { error } = await supabase.from("missions").delete().eq("id", missionId);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/missions");
+  redirect("/missions");
 }
