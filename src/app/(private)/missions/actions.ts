@@ -42,6 +42,8 @@ export async function createMissionAction(formData: FormData) {
       consultant_email: consultantEmail,
       client_name: clientName,
       client_operational_contact: clientOperationalContact || null,
+      last_followup_date: lastFollowupDate || null,
+      next_followup_date: nextFollowupDate || null,
       // Keep DB compatibility (current column is NOT NULL) while client emails are handled manually.
       client_contact_email: "manual-client-send@local.invalid",
       start_date: startDate,
@@ -143,11 +145,28 @@ export async function updateMissionIdentityAction(formData: FormData) {
   const missionId = String(formData.get("mission_id") ?? "");
   const consultantFirstName = String(formData.get("consultant_first_name") ?? "").trim();
   const consultantLastName = String(formData.get("consultant_last_name") ?? "").trim();
+  const consultantType = String(formData.get("consultant_type") ?? "").trim();
+  const consultantEmail = String(formData.get("consultant_email") ?? "").trim();
   const clientName = String(formData.get("client_name") ?? "").trim();
+  const clientOperationalContact = String(formData.get("client_operational_contact") ?? "").trim();
   const startDate = String(formData.get("start_date") ?? "").trim();
+  const lastFollowupDate = String(formData.get("last_followup_date") ?? "").trim();
+  const nextFollowupDate = String(formData.get("next_followup_date") ?? "").trim();
+  const frequencyRaw = String(formData.get("follow_up_frequency_days") ?? "").trim();
+  const existingFrequency = Number(formData.get("existing_follow_up_frequency_days") ?? 90);
+  const followUpFrequencyDays = frequencyRaw === "custom" ? existingFrequency : Number(frequencyRaw);
 
-  if (!missionId || !consultantFirstName || !consultantLastName || !clientName || !startDate) {
+  if (!missionId || !consultantFirstName || !consultantLastName || !consultantType || !consultantEmail || !clientName || !startDate) {
     throw new Error("Tous les champs de modification mission sont obligatoires.");
+  }
+  if (consultantType !== "Consultant Interne" && consultantType !== "Consultant Externe") {
+    throw new Error("Type de consultant invalide.");
+  }
+  if (!isValidEmail(consultantEmail)) {
+    throw new Error("L'email du consultant n'est pas valide.");
+  }
+  if (!Number.isFinite(followUpFrequencyDays) || followUpFrequencyDays <= 0) {
+    throw new Error("Frequence de suivi invalide.");
   }
 
   const { error } = await supabase
@@ -155,8 +174,14 @@ export async function updateMissionIdentityAction(formData: FormData) {
     .update({
       consultant_first_name: consultantFirstName,
       consultant_last_name: consultantLastName,
+      consultant_type: consultantType,
+      consultant_email: consultantEmail,
       client_name: clientName,
+      client_operational_contact: clientOperationalContact || null,
       start_date: startDate,
+      last_followup_date: lastFollowupDate || null,
+      next_followup_date: nextFollowupDate || null,
+      follow_up_frequency_days: followUpFrequencyDays,
     })
     .eq("id", missionId);
 
@@ -178,26 +203,10 @@ export async function updateMissionNextFollowupAction(formData: FormData) {
     throw new Error("mission_id obligatoire.");
   }
 
-  const { data: latestReport, error: latestReportError } = await supabase
-    .from("mission_reports")
-    .select("id")
-    .eq("mission_id", missionId)
-    .order("report_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (latestReportError) {
-    throw new Error(latestReportError.message);
-  }
-  if (!latestReport) {
-    throw new Error("Aucun CR existant pour planifier un prochain suivi.");
-  }
-
   const { error } = await supabase
-    .from("mission_reports")
+    .from("missions")
     .update({ next_followup_date: nextFollowupDate || null })
-    .eq("id", latestReport.id);
+    .eq("id", missionId);
 
   if (error) {
     throw new Error(error.message);

@@ -17,11 +17,15 @@ type Mission = {
   id: string;
   consultant_first_name: string;
   consultant_last_name: string;
+  consultant_type: string;
   consultant_email: string;
   client_name: string;
+  client_operational_contact: string | null;
   client_contact_email: string;
   start_date: string;
   follow_up_frequency_days: number;
+  last_followup_date: string | null;
+  next_followup_date: string | null;
 };
 
 type Report = {
@@ -86,9 +90,9 @@ export default async function MissionDetailPage({
   const typedMission = mission as Mission;
   const typedReports = (reports ?? []) as Report[];
 
-  const latestReport = typedReports[0];
   const lastValidatedReport = typedReports.find((report) => report.status === "validated" || report.status === "sent_to_client");
-  const nextPlannedDate = latestReport?.next_followup_date ?? null;
+  const lastFollowupDisplayDate = lastValidatedReport?.report_date ?? typedMission.last_followup_date ?? null;
+  const nextPlannedDate = typedMission.next_followup_date ?? null;
 
   return (
     <section className="space-y-6">
@@ -105,8 +109,14 @@ export default async function MissionDetailPage({
             missionId={typedMission.id}
             initialConsultantFirstName={typedMission.consultant_first_name}
             initialConsultantLastName={typedMission.consultant_last_name}
+            initialConsultantType={typedMission.consultant_type}
+            initialConsultantEmail={typedMission.consultant_email}
             initialClientName={typedMission.client_name}
+            initialClientOperationalContact={typedMission.client_operational_contact}
             initialStartDate={typedMission.start_date}
+            initialLastFollowupDate={typedMission.last_followup_date}
+            initialNextFollowupDate={typedMission.next_followup_date}
+            initialFollowUpFrequencyDays={typedMission.follow_up_frequency_days}
             action={updateMissionIdentityAction}
           />
         </div>
@@ -127,7 +137,7 @@ export default async function MissionDetailPage({
           <div className="rounded-md border border-slate-200 p-3">
             <p className="text-sm font-medium text-slate-900">Dernier suivi de mission</p>
             <p className="mt-1 text-sm text-slate-700">
-              {lastValidatedReport ? toFrenchDate(lastValidatedReport.report_date) : "Aucun suivi effectue"}
+              {lastFollowupDisplayDate ? toFrenchDate(lastFollowupDisplayDate) : "Aucun suivi effectue"}
             </p>
           </div>
           <div className="rounded-md border border-slate-200 p-3">

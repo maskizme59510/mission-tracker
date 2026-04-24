@@ -11,6 +11,7 @@ export default async function DashboardPage() {
     { count: overdueFollowups },
     { data: notifications },
     { data: healthRows, error: healthError },
+    { data: missionsRows, error: missionsRowsError },
   ] =
     await Promise.all([
       supabase.from("missions").select("*", { count: "exact", head: true }).eq("status", "active"),
@@ -33,16 +34,27 @@ export default async function DashboardPage() {
           "mission_id,consultant_first_name,consultant_last_name,client_name,latest_report_date,next_followup_date,is_follow_up_within_14_days",
         )
         .order("next_followup_date", { ascending: true }),
+      supabase.from("missions").select("id,last_followup_date,next_followup_date"),
     ]);
 
   if (healthError) {
     throw new Error(healthError.message);
   }
+  if (missionsRowsError) {
+    throw new Error(missionsRowsError.message);
+  }
+
+  const missionMetaById = new Map(
+    (missionsRows ?? []).map((mission) => [mission.id, mission]),
+  );
 
   const alerts = (healthRows ?? [])
     .map((row) => {
       const today = new Date();
-      const lastFollowupDate = row.latest_report_date ? new Date(row.latest_report_date) : null;
+      const missionMeta = missionMetaById.get(row.mission_id);
+      const lastFollowupSource = row.latest_report_date ?? missionMeta?.last_followup_date ?? null;
+      const nextFollowupSource = missionMeta?.next_followup_date ?? null;
+      const lastFollowupDate = lastFollowupSource ? new Date(lastFollowupSource) : null;
       const daysSinceLastFollowup = lastFollowupDate
         ? Math.floor((today.getTime() - lastFollowupDate.getTime()) / (1000 * 60 * 60 * 24))
         : 0;
@@ -68,6 +80,8 @@ export default async function DashboardPage() {
 
       return {
         ...row,
+        last_followup_display_date: lastFollowupSource,
+        next_followup_display_date: nextFollowupSource,
         priority,
         label,
         classes,
@@ -157,7 +171,14 @@ export default async function DashboardPage() {
                         <p className="text-sm font-medium text-slate-900">
                           {alert.consultant_first_name} {alert.consultant_last_name}
                         </p>
-                        <p className="text-xs text-slate-600">Prochain suivi: {toFrenchDate(alert.next_followup_date)}</p>
+                        <p className="text-xs text-slate-600">
+                          Dernier suivi de mission:{" "}
+                          {alert.last_followup_display_date ? toFrenchDate(alert.last_followup_display_date) : "Aucun suivi effectue"}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          Prochain suivi planifie:{" "}
+                          {alert.next_followup_display_date ? toFrenchDate(alert.next_followup_display_date) : "A planifier"}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`rounded-full border px-2 py-1 text-xs font-medium ${alert.classes}`}>{alert.label}</span>
