@@ -162,7 +162,7 @@ export default async function MissionDetailPage({
         ) : null}
         {createReport === "error" ? (
           <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            ❌ Erreur lors de la creation du CR. Verifie la base Supabase (next_followup_date nullable) puis reessaie.
+            ❌ Erreur lors de la creation du CR. Veuillez reessayer.
           </p>
         ) : null}
         <form action={createFollowupReportAction} className="mt-4">

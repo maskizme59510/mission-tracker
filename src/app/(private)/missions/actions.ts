@@ -8,6 +8,12 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function normalizeOptionalDate(value: string | null | undefined) {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return null;
+  return trimmed;
+}
+
 export async function createMissionAction(formData: FormData) {
   const { supabase, user } = await requireAdminSession();
 
@@ -80,14 +86,18 @@ export async function createFollowupReportAction(formData: FormData) {
       .limit(1)
       .maybeSingle();
 
+    const lastFollowupDate = normalizeOptionalDate(latestReport?.report_date ?? null);
+    const nextFollowupDate = normalizeOptionalDate(String(formData.get("next_followup_date") ?? ""));
+
     const { data: createdReport, error: createError } = await supabase
       .from("mission_reports")
       .insert({
         mission_id: missionId,
         type: "followup",
         report_date: reportDate,
-        last_followup_date: latestReport?.report_date ?? null,
-        next_followup_date: null,
+        // Optional dates: always persist null when empty.
+        last_followup_date: lastFollowupDate,
+        next_followup_date: nextFollowupDate,
         status: "draft",
         created_by: user.id,
       })
