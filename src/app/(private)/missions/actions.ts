@@ -18,6 +18,8 @@ export async function createMissionAction(formData: FormData) {
   const clientName = String(formData.get("client_name") ?? "").trim();
   const clientOperationalContact = String(formData.get("client_operational_contact") ?? "").trim();
   const startDate = String(formData.get("start_date") ?? "").trim();
+  const lastFollowupDate = String(formData.get("last_followup_date") ?? "").trim();
+  const nextFollowupDate = String(formData.get("next_followup_date") ?? "").trim();
   const frequency = Number(formData.get("follow_up_frequency_days") ?? 90);
 
   if (!consultantFirstName || !consultantLastName || !consultantType || !consultantEmail || !clientName || !startDate) {
@@ -52,18 +54,14 @@ export async function createMissionAction(formData: FormData) {
     throw new Error(missionError?.message ?? "Erreur de creation de mission.");
   }
 
-  const start = new Date(mission.start_date);
-  const nextFollowup = new Date(start);
-  nextFollowup.setDate(nextFollowup.getDate() + mission.follow_up_frequency_days);
-
   const { data: report, error: reportError } = await supabase
     .from("mission_reports")
     .insert({
       mission_id: mission.id,
       type: "kickoff",
       report_date: mission.start_date,
-      last_followup_date: null,
-      next_followup_date: nextFollowup.toISOString().slice(0, 10),
+      last_followup_date: lastFollowupDate || null,
+      next_followup_date: nextFollowupDate || null,
       status: "draft",
       created_by: user.id,
     })
@@ -185,6 +183,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
 
   revalidatePath(`/missions/${missionId}`);
   revalidatePath("/missions");
+  redirect(`/missions/${missionId}?missionUpdated=1`);
 }
 
 export async function updateMissionNextFollowupAction(formData: FormData) {

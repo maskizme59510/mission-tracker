@@ -69,7 +69,7 @@ export function MissionIdentityEditor({
         <input
           name="start_date"
           type="date"
-          defaultValue={initialStartDate}
+          defaultValue={initialStartDate ? initialStartDate.slice(0, 10) : ""}
           required
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
         />

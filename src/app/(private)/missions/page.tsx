@@ -81,17 +81,38 @@ export default async function MissionsPage() {
             placeholder="Responsable de mission cote client (optionnel)"
             className="rounded-md border border-slate-300 px-3 py-2"
           />
-          <input name="start_date" type="date" required className="rounded-md border border-slate-300 px-3 py-2" />
-          <label className="text-sm text-slate-700 md:col-span-1">
-            Frequence de suivi (en jours)
+          <label className="text-sm text-slate-700">
+            Date de demarrage de mission
+            <input name="start_date" type="date" required className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
+          </label>
+          <label className="text-sm text-slate-700">
+            Date du dernier suivi de mission
             <input
-              name="follow_up_frequency_days"
-              type="number"
-              min={1}
-              defaultValue={90}
+              name="last_followup_date"
+              type="date"
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
             />
-            <span className="mt-1 block text-xs text-slate-500">90 jours = trimestriel (recommande)</span>
+          </label>
+          <label className="text-sm text-slate-700">
+            Date du prochain suivi planifie
+            <input
+              name="next_followup_date"
+              type="date"
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+          </label>
+          <label className="text-sm text-slate-700 md:col-span-1">
+            Frequence de suivi (en jours)
+            <select
+              name="follow_up_frequency_days"
+              defaultValue="90"
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+            >
+              <option value="30">Mensuel (30 jours)</option>
+              <option value="90">Trimestriel (90 jours)</option>
+              <option value="120">Tous les 4 mois (120 jours)</option>
+              <option value="150">Tous les 5 mois (150 jours)</option>
+            </select>
           </label>
           <button
             type="submit"
