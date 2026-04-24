@@ -1,0 +1,117 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireAdminSession } from "@/lib/auth";
+import { toFrenchDate } from "@/lib/format";
+import { createFollowupReportAction } from "@/app/(private)/missions/actions";
+
+type Mission = {
+  id: string;
+  consultant_first_name: string;
+  consultant_last_name: string;
+  consultant_email: string;
+  client_name: string;
+  client_contact_email: string;
+  start_date: string;
+  follow_up_frequency_days: number;
+};
+
+type Report = {
+  id: string;
+  type: "kickoff" | "followup";
+  report_date: string;
+  next_followup_date: string;
+  status: "draft" | "pending_consultant_validation" | "validated" | "sent_to_client";
+};
+
+export default async function MissionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { supabase } = await requireAdminSession();
+
+  const { data: mission, error: missionError } = await supabase
+    .from("missions")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (missionError) throw new Error(missionError.message);
+  if (!mission) notFound();
+
+  const { data: reports, error: reportsError } = await supabase
+    .from("mission_reports")
+    .select("id,type,report_date,next_followup_date,status")
+    .eq("mission_id", id)
+    .order("report_date", { ascending: false });
+  if (reportsError) throw new Error(reportsError.message);
+
+  const typedMission = mission as Mission;
+  const typedReports = (reports ?? []) as Report[];
+
+  const latestReport = typedReports[0];
+  const defaultReportDate = new Date().toISOString().slice(0, 10);
+  const defaultNextFollowup = latestReport?.next_followup_date ?? defaultReportDate;
+
+  return (
+    <section className="space-y-6">
+      <Link href="/missions" className="text-sm font-medium text-slate-700 underline">
+        Retour a la liste des missions
+      </Link>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-2xl font-semibold text-slate-900">
+          {typedMission.consultant_first_name} {typedMission.consultant_last_name} - {typedMission.client_name}
+        </h2>
+        <p className="mt-1 text-slate-600">
+          Debut mission : {toFrenchDate(typedMission.start_date)} - Frequence : {typedMission.follow_up_frequency_days} jours
+        </p>
+      </article>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="text-lg font-semibold text-slate-900">Creer un CR de suivi</h3>
+        <form action={createFollowupReportAction} className="mt-4 grid gap-3 md:grid-cols-4">
+          <input type="hidden" name="mission_id" value={typedMission.id} />
+          <label className="text-sm text-slate-700">
+            Date du CR
+            <input name="report_date" type="date" required defaultValue={defaultReportDate} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
+          </label>
+          <label className="text-sm text-slate-700">
+            Dernier suivi
+            <input
+              name="last_followup_date"
+              type="date"
+              defaultValue={latestReport?.report_date ?? typedMission.start_date}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+          </label>
+          <label className="text-sm text-slate-700">
+            Prochain suivi
+            <input name="next_followup_date" type="date" required defaultValue={defaultNextFollowup} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
+          </label>
+          <div className="flex items-end">
+            <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+              Creer CR suivi
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="text-lg font-semibold text-slate-900">Historique des CR</h3>
+        {typedReports.length === 0 ? (
+          <p className="mt-3 text-slate-600">Aucun CR pour cette mission.</p>
+        ) : (
+          <div className="mt-4 space-y-2">
+            {typedReports.map((report) => (
+              <div key={report.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                <p className="text-sm text-slate-800">
+                  {report.type === "kickoff" ? "CR Demarrage" : "CR Suivi"} - {toFrenchDate(report.report_date)} - statut: {report.status}
+                </p>
+                <Link href={`/reports/${report.id}/edit`} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100">
+                  Editer
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </article>
+    </section>
+  );
+}
