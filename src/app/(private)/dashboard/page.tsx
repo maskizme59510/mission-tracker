@@ -268,9 +268,17 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold text-slate-900">Alertes missions ({alertsPercentage}%)</h3>
-        <p className="mt-1 text-sm text-slate-600">Affiche uniquement les missions avec alertes marge, duree ou suivi (orange/rouge).</p>
+      <details className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">
+              Alertes missions ({alertsPercentage}% - {alerts.length} missions en alerte)
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">Affiche uniquement les missions avec alertes marge, duree ou suivi (orange/rouge).</p>
+          </div>
+          <span className="text-slate-500 group-open:hidden">▼</span>
+          <span className="hidden text-slate-500 group-open:inline">▲</span>
+        </summary>
         {alerts.length === 0 ? (
           <p className="mt-3 text-sm text-slate-600">Aucune mission a afficher.</p>
         ) : (
@@ -294,7 +302,7 @@ export default async function DashboardPage() {
             ))}
           </div>
         )}
-      </div>
+      </details>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">Actions rapides</h3>
