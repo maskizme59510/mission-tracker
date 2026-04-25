@@ -125,7 +125,7 @@ function getElapsedMonths(startDate: string): number {
 }
 
 export default async function DashboardPage() {
-  const { supabase } = await requireAdminSession();
+  const { supabase, user } = await requireAdminSession();
 
   const [
     { count: activeMissions },
@@ -135,17 +135,19 @@ export default async function DashboardPage() {
     { data: marginsRows, error: marginsRowsError },
   ] =
     await Promise.all([
-      supabase.from("missions").select("*", { count: "exact", head: true }).eq("status", "active"),
+      supabase.from("missions").select("*", { count: "exact", head: true }).eq("status", "active").eq("owner_id", user.id),
       supabase
-        .from("mission_reports")
+        .from("mission_health_view")
         .select("*", { count: "exact", head: true })
-        .eq("status", "pending_consultant_validation"),
+        .eq("owner_id", user.id)
+        .eq("latest_report_status", "pending_consultant_validation"),
       supabase
         .from("admin_notifications")
         .select(
-          "id,title,message,created_at,read_at,report_id,report:mission_reports(type,mission:missions(consultant_first_name,consultant_last_name,client_name))",
+          "id,title,message,created_at,read_at,report_id,report:mission_reports(type,mission:missions(owner_id,consultant_first_name,consultant_last_name,client_name))",
         )
         .is("read_at", null)
+        .eq("report.mission.owner_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5),
       supabase
@@ -153,6 +155,7 @@ export default async function DashboardPage() {
         .select(
           "mission_id,consultant_first_name,consultant_last_name,client_name,start_date,follow_up_frequency_days,latest_report_date,next_followup_date",
         )
+        .eq("owner_id", user.id)
         .order("next_followup_date", { ascending: true }),
       supabase.from("missions").select("id,tjm,cj,consultant_type,next_followup_date"),
     ]);

@@ -47,6 +47,9 @@ export async function middleware(request: NextRequest) {
   if (!user && request.nextUrl.pathname.startsWith("/missions")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
+  if (!user && request.nextUrl.pathname.startsWith("/admin")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   if (user && request.nextUrl.pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -56,5 +59,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/dashboard/:path*", "/missions/:path*"],
+  matcher: ["/login", "/dashboard/:path*", "/missions/:path*", "/admin/:path*"],
 };

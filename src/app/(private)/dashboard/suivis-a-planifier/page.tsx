@@ -106,7 +106,7 @@ function getElapsedMonths(startDate: string): number {
 }
 
 export default async function FollowupsToPlanPage() {
-  const { supabase } = await requireAdminSession();
+  const { supabase, user } = await requireAdminSession();
 
   const [{ data: healthRows, error: healthError }, { data: missionRows, error: missionError }] = await Promise.all([
     supabase
@@ -114,8 +114,9 @@ export default async function FollowupsToPlanPage() {
       .select(
         "mission_id,consultant_first_name,consultant_last_name,client_name,start_date,follow_up_frequency_days,latest_report_date,next_followup_date",
       )
+      .eq("owner_id", user.id)
       .order("start_date", { ascending: false }),
-    supabase.from("missions").select("id,tjm,cj,consultant_type,next_followup_date"),
+    supabase.from("missions").select("id,tjm,cj,consultant_type,next_followup_date").eq("owner_id", user.id),
   ]);
 
   if (healthError) {

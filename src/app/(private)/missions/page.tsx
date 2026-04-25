@@ -31,6 +31,11 @@ type MissionMarginRow = {
   commercial: string | null;
 };
 
+function isColumnMissingError(message: string | undefined) {
+  const raw = (message ?? "").toLowerCase();
+  return raw.includes("column") && (raw.includes("does not exist") || raw.includes("not found"));
+}
+
 function getMissionDurationBadge(startDate: string): { label: string; classes: string } | null {
   const start = new Date(startDate);
   const now = new Date();
@@ -85,6 +90,7 @@ export default async function MissionsPage() {
   const { data, error } = await supabase
     .from("mission_health_view")
     .select("*")
+    .eq("owner_id", user.id)
     .order("start_date", { ascending: false });
 
   if (error) {
@@ -92,12 +98,24 @@ export default async function MissionsPage() {
   }
 
   const missionIds = (data ?? []).map((row) => String((row as { mission_id: string }).mission_id));
-  const { data: marginsData, error: marginsError } = await supabase
+  let marginsData: MissionMarginRow[] | null = null;
+  const marginsQuery = await supabase
     .from("missions")
     .select("id,tjm,cj,consultant_type,commercial")
     .in("id", missionIds);
-  if (marginsError) {
-    throw new Error(marginsError.message);
+  if (marginsQuery.error && isColumnMissingError(marginsQuery.error.message)) {
+    const fallbackQuery = await supabase
+      .from("missions")
+      .select("id,tjm,cj,consultant_type")
+      .in("id", missionIds);
+    if (fallbackQuery.error) {
+      throw new Error(fallbackQuery.error.message);
+    }
+    marginsData = (fallbackQuery.data ?? []).map((item) => ({ ...(item as MissionMarginRow), commercial: null }));
+  } else if (marginsQuery.error) {
+    throw new Error(marginsQuery.error.message);
+  } else {
+    marginsData = (marginsQuery.data ?? []) as MissionMarginRow[];
   }
 
   const missions = (data ?? []) as MissionRow[];

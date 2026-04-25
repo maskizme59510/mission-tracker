@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getUserProfile } from "@/lib/rbac";
 
 export async function requireAdminSession() {
   const supabase = await createSupabaseServerClient();
@@ -16,4 +17,10 @@ export async function requireAdminSession() {
   }
 
   return { supabase, user };
+}
+
+export async function requireUserSessionWithProfile() {
+  const { supabase, user } = await requireAdminSession();
+  const profile = await getUserProfile(supabase, user);
+  return { supabase, user, profile };
 }
