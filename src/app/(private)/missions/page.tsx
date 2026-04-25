@@ -29,7 +29,7 @@ type MissionMarginRow = {
   consultant_type: string;
 };
 
-function getMissionDurationBadge(startDate: string) {
+function getMissionDurationBadge(startDate: string): { label: string; classes: string } | null {
   const start = new Date(startDate);
   const now = new Date();
   const elapsedMonths = Math.max(
@@ -45,13 +45,10 @@ function getMissionDurationBadge(startDate: string) {
   }
 
   if (elapsedMonths < 30) {
-    return { label, classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-  }
-  if (elapsedMonths <= 35) {
-    return { label, classes: "bg-amber-50 text-amber-700 border-amber-200" };
+    return null;
   }
   if (elapsedMonths <= 41) {
-    return { label, classes: "bg-yellow-50 text-yellow-700 border-yellow-200" };
+    return { label, classes: "bg-amber-50 text-amber-700 border-amber-200" };
   }
   return { label, classes: "bg-red-50 text-red-700 border-red-200" };
 }
@@ -269,9 +266,11 @@ export default async function MissionsPage() {
                             <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`rounded-full border px-2 py-1 text-xs font-medium ${durationBadge.classes}`}>
-                              {durationBadge.label}
-                            </span>
+                            {durationBadge ? (
+                              <span className={`rounded-full border px-2 py-1 text-xs font-medium ${durationBadge.classes}`}>
+                                {durationBadge.label}
+                              </span>
+                            ) : null}
                             {marginBadge ? (
                               <span className={`rounded-full border px-2 py-1 text-xs font-medium ${marginBadge.classes}`}>
                                 {marginBadge.label}
