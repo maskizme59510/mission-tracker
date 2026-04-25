@@ -22,6 +22,7 @@ type Mission = {
   consultant_type: string;
   consultant_email: string;
   client_name: string;
+  commercial: string | null;
   client_operational_contact: string | null;
   client_contact_email: string;
   start_date: string;
@@ -115,6 +116,7 @@ export default async function MissionDetailPage({
             initialConsultantType={typedMission.consultant_type}
             initialConsultantEmail={typedMission.consultant_email}
             initialClientName={typedMission.client_name}
+            initialCommercial={typedMission.commercial}
             initialClientOperationalContact={typedMission.client_operational_contact}
             initialStartDate={typedMission.start_date}
             initialTjm={typedMission.tjm}
@@ -124,6 +126,7 @@ export default async function MissionDetailPage({
           />
         </div>
         <p className="mt-1 text-slate-600">Debut mission : {toFrenchDate(typedMission.start_date)}</p>
+        <p className="text-slate-600">Commercial : {typedMission.commercial || "Non renseigne"}</p>
         <p className="text-slate-600">{missionDurationLabel(typedMission.start_date)}</p>
         <form action={deleteMissionAction} className="mt-4">
           <input type="hidden" name="mission_id" value={typedMission.id} />

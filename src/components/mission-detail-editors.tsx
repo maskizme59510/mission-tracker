@@ -12,6 +12,7 @@ type MissionIdentityEditorProps = {
   initialConsultantType: string;
   initialConsultantEmail: string;
   initialClientName: string;
+  initialCommercial: string | null;
   initialClientOperationalContact: string | null;
   initialStartDate: string;
   initialTjm: number | null;
@@ -34,6 +35,7 @@ export function MissionIdentityEditor({
   initialConsultantType,
   initialConsultantEmail,
   initialClientName,
+  initialCommercial,
   initialClientOperationalContact,
   initialStartDate,
   initialTjm,
@@ -102,6 +104,12 @@ export function MissionIdentityEditor({
           required
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           placeholder="Nom de l'enseigne"
+        />
+        <UppercaseInput
+          name="commercial"
+          defaultValue={initialCommercial ?? ""}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          placeholder="Commercial"
         />
         <input
           name="client_operational_contact"

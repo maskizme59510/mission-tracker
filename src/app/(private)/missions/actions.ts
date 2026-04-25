@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { requireAdminSession } from "@/lib/auth";
+import { deriveCommercialFromUser, normalizeCommercial } from "@/lib/commercial";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -59,6 +60,8 @@ export async function createMissionAction(formData: FormData) {
   const tjm = normalizeOptionalNumeric(String(formData.get("tjm") ?? ""));
   const cj = normalizeOptionalNumeric(String(formData.get("cj") ?? ""));
   const frequency = Number(formData.get("follow_up_frequency_days") ?? 90);
+  const commercialInput = normalizeCommercial(String(formData.get("commercial") ?? ""));
+  const commercial = commercialInput ?? deriveCommercialFromUser(user);
 
   if (!consultantFirstName || !consultantLastName || !consultantType || !consultantEmail || !clientName || !startDate) {
     throw new Error("Tous les champs mission sont obligatoires.");
@@ -79,6 +82,7 @@ export async function createMissionAction(formData: FormData) {
       consultant_type: consultantType,
       consultant_email: consultantEmail,
       client_name: clientName,
+      commercial,
       client_operational_contact: clientOperationalContact || null,
       last_followup_date: lastFollowupDate || null,
       next_followup_date: nextFollowupDate || null,
@@ -223,6 +227,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
   const nextFollowupDate = String(formData.get("next_followup_date") ?? "").trim();
   const tjm = normalizeOptionalNumeric(String(formData.get("tjm") ?? ""));
   const cj = normalizeOptionalNumeric(String(formData.get("cj") ?? ""));
+  const commercial = normalizeCommercial(String(formData.get("commercial") ?? ""));
   const frequencyRaw = String(formData.get("follow_up_frequency_days") ?? "").trim();
   const existingFrequency = Number(formData.get("existing_follow_up_frequency_days") ?? 90);
   const followUpFrequencyDays = frequencyRaw === "custom" ? existingFrequency : Number(frequencyRaw);
@@ -246,6 +251,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
     consultant_type: string;
     consultant_email: string;
     client_name: string;
+    commercial: string | null;
     client_operational_contact: string | null;
     start_date: string;
     tjm: number | null;
@@ -259,6 +265,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
     consultant_type: consultantType,
     consultant_email: consultantEmail,
     client_name: clientName,
+    commercial,
     client_operational_contact: clientOperationalContact || null,
     start_date: startDate,
     tjm,

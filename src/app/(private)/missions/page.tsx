@@ -5,6 +5,7 @@ import { createMissionAction } from "@/app/(private)/missions/actions";
 import { ConsultantContactFields } from "@/components/consultant-contact-fields";
 import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { UppercaseInput } from "@/components/uppercase-input";
+import { deriveCommercialFromUser } from "@/lib/commercial";
 
 type MissionRow = {
   mission_id: string;
@@ -27,6 +28,7 @@ type MissionMarginRow = {
   tjm: number | null;
   cj: number | null;
   consultant_type: string;
+  commercial: string | null;
 };
 
 function getMissionDurationBadge(startDate: string): { label: string; classes: string } | null {
@@ -79,7 +81,7 @@ function getPlanningBadge(mission: MissionRow): { label: string; classes: string
 }
 
 export default async function MissionsPage() {
-  const { supabase } = await requireAdminSession();
+  const { supabase, user } = await requireAdminSession();
   const { data, error } = await supabase
     .from("mission_health_view")
     .select("*")
@@ -92,7 +94,7 @@ export default async function MissionsPage() {
   const missionIds = (data ?? []).map((row) => String((row as { mission_id: string }).mission_id));
   const { data: marginsData, error: marginsError } = await supabase
     .from("missions")
-    .select("id,tjm,cj,consultant_type")
+    .select("id,tjm,cj,consultant_type,commercial")
     .in("id", missionIds);
   if (marginsError) {
     throw new Error(marginsError.message);
@@ -100,6 +102,7 @@ export default async function MissionsPage() {
 
   const missions = (data ?? []) as MissionRow[];
   const marginsByMissionId = new Map<string, MissionMarginRow>((marginsData ?? []).map((item) => [item.id, item as MissionMarginRow]));
+  const defaultCommercial = deriveCommercialFromUser(user) ?? "";
   const missionsByClient = missions.reduce<Record<string, MissionRow[]>>((accumulator, mission) => {
     const key = mission.client_name || "Enseigne non renseignee";
     if (!accumulator[key]) {
@@ -159,6 +162,14 @@ export default async function MissionsPage() {
             placeholder="Responsable de mission cote client (optionnel)"
             className="rounded-md border border-slate-300 px-3 py-2"
           />
+          <label className="text-sm text-slate-700">
+            Commercial
+            <UppercaseInput
+              name="commercial"
+              defaultValue={defaultCommercial}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+          </label>
           <label className="text-sm text-slate-700">
             Date de demarrage de mission
             <input name="start_date" type="date" required className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
@@ -250,6 +261,7 @@ export default async function MissionsPage() {
                       const durationBadge = getMissionDurationBadge(mission.start_date);
                       const planningBadge = getPlanningBadge(mission);
                       const marginBadge = getMarginBadge(mission.mission_id);
+                      const commercial = marginsByMissionId.get(mission.mission_id)?.commercial;
                       return (
                         <div key={mission.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
                           <div>
@@ -259,6 +271,7 @@ export default async function MissionsPage() {
                             >
                               {mission.consultant_first_name} {mission.consultant_last_name}
                             </Link>
+                            {commercial ? <span className="ml-2 text-xs font-semibold text-slate-600">({commercial})</span> : null}
                             <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
                           </div>
                           <div className="flex items-center gap-2">
