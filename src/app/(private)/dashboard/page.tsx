@@ -2,6 +2,107 @@ import Link from "next/link";
 import { requireAdminSession } from "@/lib/auth";
 import { toFrenchDate } from "@/lib/format";
 
+type MissionAlertRow = {
+  mission_id: string;
+  consultant_first_name: string;
+  consultant_last_name: string;
+  client_name: string;
+  start_date: string;
+  latest_report_date: string | null;
+  next_followup_date: string | null;
+  follow_up_frequency_days: number;
+};
+
+type MissionMarginRow = {
+  id: string;
+  tjm: number | null;
+  cj: number | null;
+  consultant_type: string;
+};
+
+type AlertBadge = {
+  label: string;
+  classes: string;
+  severity: "red" | "orange";
+};
+
+function getMissionDurationBadge(startDate: string): AlertBadge | null {
+  const start = new Date(startDate);
+  const now = new Date();
+  const elapsedMonths = Math.max(
+    0,
+    (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()),
+  );
+
+  let label = "3ans";
+  if (elapsedMonths < 36) {
+    label = `3ans-${36 - elapsedMonths}mois`;
+  } else if (elapsedMonths > 36) {
+    label = `3ans+${elapsedMonths - 36}mois`;
+  }
+
+  if (elapsedMonths < 30) {
+    return null;
+  }
+  if (elapsedMonths <= 41) {
+    return { label, classes: "bg-amber-50 text-amber-700 border-amber-200", severity: "orange" };
+  }
+  return { label, classes: "bg-red-50 text-red-700 border-red-200", severity: "red" };
+}
+
+function getPlanningBadge(mission: MissionAlertRow): AlertBadge | null {
+  if (mission.next_followup_date) {
+    return null;
+  }
+
+  const baselineDate = mission.latest_report_date ?? null;
+  if (!baselineDate) {
+    return { label: "🟠 A planifier", classes: "bg-amber-50 text-amber-700 border-amber-200", severity: "orange" };
+  }
+
+  const baseline = new Date(`${baselineDate}T00:00:00`);
+  const today = new Date();
+  const msInDay = 24 * 60 * 60 * 1000;
+  const elapsedDays = Math.floor((today.getTime() - baseline.getTime()) / msInDay);
+  const frequencyDays = mission.follow_up_frequency_days > 0 ? mission.follow_up_frequency_days : 90;
+  const targetDate = new Date(baseline.getTime() + frequencyDays * msInDay);
+  const targetMonthRaw = targetDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const targetMonth = targetMonthRaw.charAt(0).toLocaleUpperCase("fr-FR") + targetMonthRaw.slice(1);
+
+  if (elapsedDays > frequencyDays) {
+    return { label: `🔴 A planifier - ${targetMonth}`, classes: "bg-red-50 text-red-700 border-red-200", severity: "red" };
+  }
+
+  return {
+    label: `🟠 A planifier - ${targetMonth}`,
+    classes: "bg-amber-50 text-amber-700 border-amber-200",
+    severity: "orange",
+  };
+}
+
+function getMarginBadge(margin: MissionMarginRow | undefined): AlertBadge | null {
+  if (!margin || margin.tjm === null || margin.cj === null || margin.tjm <= 0) return null;
+
+  const marginPercent = ((margin.tjm - margin.cj) / margin.tjm) * 100;
+  const rounded = Math.round(marginPercent * 10) / 10;
+  const label = `${rounded.toFixed(1)}%`;
+
+  if (margin.consultant_type === "Consultant Externe") {
+    if (rounded < 10) {
+      return { label, classes: "bg-red-50 text-red-700 border-red-200", severity: "red" };
+    }
+    return null;
+  }
+
+  if (rounded < 20) {
+    return { label, classes: "bg-red-50 text-red-700 border-red-200", severity: "red" };
+  }
+  if (rounded < 30) {
+    return { label, classes: "bg-amber-50 text-amber-700 border-amber-200", severity: "orange" };
+  }
+  return null;
+}
+
 export default async function DashboardPage() {
   const { supabase } = await requireAdminSession();
 
@@ -11,7 +112,7 @@ export default async function DashboardPage() {
     { count: overdueFollowups },
     { data: notifications },
     { data: healthRows, error: healthError },
-    { data: missionsRows, error: missionsRowsError },
+    { data: marginsRows, error: marginsRowsError },
   ] =
     await Promise.all([
       supabase.from("missions").select("*", { count: "exact", head: true }).eq("status", "active"),
@@ -31,73 +132,42 @@ export default async function DashboardPage() {
       supabase
         .from("mission_health_view")
         .select(
-          "mission_id,consultant_first_name,consultant_last_name,client_name,latest_report_date,next_followup_date,is_follow_up_within_14_days",
+          "mission_id,consultant_first_name,consultant_last_name,client_name,start_date,follow_up_frequency_days,latest_report_date,next_followup_date",
         )
         .order("next_followup_date", { ascending: true }),
-      supabase.from("missions").select("id,last_followup_date,next_followup_date"),
+      supabase.from("missions").select("id,tjm,cj,consultant_type"),
     ]);
 
   if (healthError) {
     throw new Error(healthError.message);
   }
-  if (missionsRowsError) {
-    throw new Error(missionsRowsError.message);
+  if (marginsRowsError) {
+    throw new Error(marginsRowsError.message);
   }
 
-  const missionMetaById = new Map(
-    (missionsRows ?? []).map((mission) => [mission.id, mission]),
+  const marginsByMissionId = new Map<string, MissionMarginRow>(
+    (marginsRows ?? []).map((mission) => [mission.id, mission as MissionMarginRow]),
   );
 
-  const alerts = (healthRows ?? [])
+  const alerts = ((healthRows ?? []) as MissionAlertRow[])
     .map((row) => {
-      const today = new Date();
-      const missionMeta = missionMetaById.get(row.mission_id);
-      const lastFollowupSource = row.latest_report_date ?? missionMeta?.last_followup_date ?? null;
-      const nextFollowupSource = missionMeta?.next_followup_date ?? null;
-      const lastFollowupDate = lastFollowupSource ? new Date(lastFollowupSource) : null;
-      const daysSinceLastFollowup = lastFollowupDate
-        ? Math.floor((today.getTime() - lastFollowupDate.getTime()) / (1000 * 60 * 60 * 24))
-        : 0;
-      const delayDays = Math.max(0, daysSinceLastFollowup - 90);
-
-      let priority = 4;
-      let label = "🟢 Mission a jour";
-      let classes = "border-emerald-200 bg-emerald-50 text-emerald-800";
-
-      if (daysSinceLastFollowup > 120) {
-        priority = 1;
-        label = `🔴 CRITIQUE - Suivi tres en retard - ${delayDays} jours de retard`;
-        classes = "border-red-200 bg-red-50 text-red-800";
-      } else if (daysSinceLastFollowup > 90) {
-        priority = 2;
-        label = `🟠 Suivi en retard - ${delayDays} jours de retard`;
-        classes = "border-orange-200 bg-orange-50 text-orange-800";
-      } else if (row.is_follow_up_within_14_days) {
-        priority = 3;
-        label = "📅 Prochain suivi < 14 jours";
-        classes = "border-blue-200 bg-blue-50 text-blue-800";
+      const marginBadge = getMarginBadge(marginsByMissionId.get(row.mission_id));
+      const durationBadge = getMissionDurationBadge(row.start_date);
+      const planningBadge = getPlanningBadge(row);
+      const badges = [marginBadge, durationBadge, planningBadge].filter((badge): badge is AlertBadge => badge !== null);
+      if (badges.length === 0) {
+        return null;
       }
 
+      const hasRed = badges.some((badge) => badge.severity === "red");
       return {
         ...row,
-        last_followup_display_date: lastFollowupSource,
-        next_followup_display_date: nextFollowupSource,
-        priority,
-        label,
-        classes,
+        badges,
+        priority: hasRed ? 1 : 2,
       };
     })
+    .filter((alert): alert is NonNullable<typeof alert> => alert !== null)
     .sort((a, b) => a.priority - b.priority);
-  const alertsByClient = alerts.reduce<Record<string, (typeof alerts)[number][]>>((accumulator, alert) => {
-    const key = alert.client_name || "Enseigne non renseignee";
-    if (!accumulator[key]) {
-      accumulator[key] = [];
-    }
-    accumulator[key].push(alert);
-    return accumulator;
-  }, {});
-
-  const sortedClientNames = Object.keys(alertsByClient).sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
 
   return (
     <section className="space-y-6">
@@ -154,39 +224,24 @@ export default async function DashboardPage() {
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">Alertes missions</h3>
-        <p className="mt-1 text-sm text-slate-600">Priorite: retard, validation en attente, suivi a venir, puis missions a jour.</p>
+        <p className="mt-1 text-sm text-slate-600">Affiche uniquement les missions avec alertes marge, duree ou suivi (orange/rouge).</p>
         {alerts.length === 0 ? (
           <p className="mt-3 text-sm text-slate-600">Aucune mission a afficher.</p>
         ) : (
           <div className="mt-3 space-y-3">
-            {sortedClientNames.map((clientName) => (
-              <div key={clientName} className="rounded-lg border border-slate-200">
-                <div className="border-b border-slate-200 bg-slate-50 px-4 py-2">
-                  <p className="text-sm font-semibold text-slate-900">{clientName}</p>
+            {alerts.map((alert) => (
+              <div key={alert.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
+                <div>
+                  <Link href={`/missions/${alert.mission_id}`} className="text-sm font-medium text-slate-900 underline-offset-2 hover:underline">
+                    {alert.consultant_first_name} {alert.consultant_last_name}
+                  </Link>
+                  <p className="text-xs text-slate-600">{alert.client_name || "Enseigne non renseignee"}</p>
                 </div>
-                <div className="space-y-2 p-3">
-                  {alertsByClient[clientName].map((alert) => (
-                    <div key={alert.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">
-                          {alert.consultant_first_name} {alert.consultant_last_name}
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          Dernier suivi de mission:{" "}
-                          {alert.last_followup_display_date ? toFrenchDate(alert.last_followup_display_date) : "Aucun suivi effectue"}
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          Prochain suivi planifie:{" "}
-                          {alert.next_followup_display_date ? toFrenchDate(alert.next_followup_display_date) : "A planifier"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`rounded-full border px-2 py-1 text-xs font-medium ${alert.classes}`}>{alert.label}</span>
-                        <Link href={`/missions/${alert.mission_id}`} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100">
-                          Ouvrir
-                        </Link>
-                      </div>
-                    </div>
+                <div className="flex items-center gap-2">
+                  {alert.badges.map((badge) => (
+                    <span key={`${alert.mission_id}-${badge.label}`} className={`rounded-full border px-2 py-1 text-xs font-medium ${badge.classes}`}>
+                      {badge.label}
+                    </span>
                   ))}
                 </div>
               </div>
