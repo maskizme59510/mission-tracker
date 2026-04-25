@@ -224,6 +224,7 @@ export default async function DashboardPage() {
   }).length;
   const activeMissionsCount = activeMissions ?? 0;
   const alertsPercentage = activeMissionsCount > 0 ? Math.round((alerts.length / activeMissionsCount) * 100) : 0;
+  const alertsPercentageClass = alertsPercentage >= 65 ? "text-red-600" : alertsPercentage >= 40 ? "text-amber-600" : "text-emerald-600";
   const followupsToPlanRatio = activeMissionsCount > 0 ? (followupsToPlanCount / activeMissionsCount) * 100 : 0;
   const followupsToPlanClass =
     followupsToPlanRatio >= 30 ? "text-red-600" : followupsToPlanRatio >= 15 ? "text-amber-600" : "text-emerald-600";
@@ -231,8 +232,8 @@ export default async function DashboardPage() {
   return (
     <section className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Dashboard</h2>
-        <p className="mt-1 text-slate-600">Vue synthese missions, validations et notifications.</p>
+        <h2 className="text-2xl font-semibold text-slate-900">Mon Tableau de bord</h2>
+        <p className="mt-1 text-slate-600">Vue synthèse de mes missions, validations et notifications.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -285,7 +286,7 @@ export default async function DashboardPage() {
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">
-              Alertes missions ({alertsPercentage}% - {alerts.length} missions en alerte)
+              Alertes missions (<span className={alertsPercentageClass}>{alertsPercentage}%</span> - {alerts.length} missions en alerte)
             </h3>
             <p className="mt-1 text-sm text-slate-600">Affiche uniquement les missions avec alertes marge, duree ou suivi (orange/rouge).</p>
           </div>

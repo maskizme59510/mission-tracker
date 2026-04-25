@@ -30,7 +30,7 @@ export default async function PrivateLayout({
 
           <nav className="flex items-center gap-3 text-sm">
             <Link className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/dashboard">
-              Dashboard
+              Mon Tableau de bord
             </Link>
             <Link className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/missions">
               Mes Missions
