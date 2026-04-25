@@ -25,6 +25,7 @@ type MissionMarginRow = {
   id: string;
   tjm: number | null;
   cj: number | null;
+  consultant_type: string;
 };
 
 function getPlanningBadge(mission: MissionRow) {
@@ -71,7 +72,7 @@ export default async function MissionsPage() {
   const missionIds = (data ?? []).map((row) => String((row as { mission_id: string }).mission_id));
   const { data: marginsData, error: marginsError } = await supabase
     .from("missions")
-    .select("id,tjm,cj")
+    .select("id,tjm,cj,consultant_type")
     .in("id", missionIds);
   if (marginsError) {
     throw new Error(marginsError.message);
@@ -97,6 +98,13 @@ export default async function MissionsPage() {
     const marginPercent = ((row.tjm - row.cj) / row.tjm) * 100;
     const rounded = Math.round(marginPercent * 10) / 10;
     const label = `${rounded.toFixed(1)}%`;
+
+    if (row.consultant_type === "Consultant Externe") {
+      if (rounded < 10) {
+        return { label, classes: "bg-red-50 text-red-700 border-red-200" };
+      }
+      return { label, classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    }
 
     if (rounded < 20) {
       return { label, classes: "bg-red-50 text-red-700 border-red-200" };
@@ -211,13 +219,15 @@ export default async function MissionsPage() {
                 <div className="space-y-2 p-3">
                   {missionsByClient[clientName]
                     .slice()
-                    .sort((a, b) =>
-                      `${a.consultant_last_name} ${a.consultant_first_name}`.localeCompare(
+                    .sort((a, b) => {
+                      const dateDiff = new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+                      if (dateDiff !== 0) return dateDiff;
+                      return `${a.consultant_last_name} ${a.consultant_first_name}`.localeCompare(
                         `${b.consultant_last_name} ${b.consultant_first_name}`,
                         "fr",
                         { sensitivity: "base" },
-                      ),
-                    )
+                      );
+                    })
                     .map((mission) => {
                       const planningBadge = getPlanningBadge(mission);
                       const marginBadge = getMarginBadge(mission.mission_id);
@@ -241,9 +251,6 @@ export default async function MissionsPage() {
                             <span className={`rounded-full border px-2 py-1 text-xs font-medium ${planningBadge.classes}`}>
                               {planningBadge.label}
                             </span>
-                            <Link href={`/missions/${mission.mission_id}`} className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
-                              Ouvrir
-                            </Link>
                           </div>
                         </div>
                       );
