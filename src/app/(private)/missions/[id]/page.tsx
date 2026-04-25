@@ -117,8 +117,6 @@ export default async function MissionDetailPage({
             initialClientName={typedMission.client_name}
             initialClientOperationalContact={typedMission.client_operational_contact}
             initialStartDate={typedMission.start_date}
-            initialLastFollowupDate={typedMission.last_followup_date}
-            initialNextFollowupDate={typedMission.next_followup_date}
             initialTjm={typedMission.tjm}
             initialCj={typedMission.cj}
             initialFollowUpFrequencyDays={typedMission.follow_up_frequency_days}

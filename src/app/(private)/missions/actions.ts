@@ -238,23 +238,39 @@ export async function updateMissionIdentityAction(formData: FormData) {
     throw new Error("Frequence de suivi invalide.");
   }
 
-  const { error } = await supabase
-    .from("missions")
-    .update({
-      consultant_first_name: consultantFirstName,
-      consultant_last_name: consultantLastName,
-      consultant_type: consultantType,
-      consultant_email: consultantEmail,
-      client_name: clientName,
-      client_operational_contact: clientOperationalContact || null,
-      start_date: startDate,
-      last_followup_date: lastFollowupDate || null,
-      next_followup_date: nextFollowupDate || null,
-      tjm,
-      cj,
-      follow_up_frequency_days: followUpFrequencyDays,
-    })
-    .eq("id", missionId);
+  const updatePayload: {
+    consultant_first_name: string;
+    consultant_last_name: string;
+    consultant_type: string;
+    consultant_email: string;
+    client_name: string;
+    client_operational_contact: string | null;
+    start_date: string;
+    tjm: number | null;
+    cj: number | null;
+    follow_up_frequency_days: number;
+    last_followup_date?: string | null;
+    next_followup_date?: string | null;
+  } = {
+    consultant_first_name: consultantFirstName,
+    consultant_last_name: consultantLastName,
+    consultant_type: consultantType,
+    consultant_email: consultantEmail,
+    client_name: clientName,
+    client_operational_contact: clientOperationalContact || null,
+    start_date: startDate,
+    tjm,
+    cj,
+    follow_up_frequency_days: followUpFrequencyDays,
+  };
+  if (hasLastFollowupDate) {
+    updatePayload.last_followup_date = lastFollowupDate || null;
+  }
+  if (hasNextFollowupDate) {
+    updatePayload.next_followup_date = nextFollowupDate || null;
+  }
+
+  const { error } = await supabase.from("missions").update(updatePayload).eq("id", missionId);
 
   if (error) {
     throw new Error(error.message);
