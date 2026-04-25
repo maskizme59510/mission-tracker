@@ -91,7 +91,7 @@ export async function updateReportAction(formData: FormData) {
     revalidatePath(`/reports/${reportId}/edit`);
     revalidatePath(`/missions/${missionId}`);
     revalidatePath("/missions");
-    redirect(`/reports/${reportId}/edit?save=success`);
+    redirect(`/missions/${missionId}?reportSaved=1`);
   } catch (error) {
     if (isRedirectError(error)) throw error;
     redirect(`/reports/${reportId}/edit?save=error`);

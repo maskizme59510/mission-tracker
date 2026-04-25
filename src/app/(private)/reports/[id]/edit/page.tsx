@@ -67,6 +67,16 @@ export default async function EditReportPage({
     .eq("report_id", id)
     .order("position", { ascending: true });
 
+  const { data: previousReport } = await supabase
+    .from("mission_reports")
+    .select("report_date")
+    .eq("mission_id", typedReport.mission_id)
+    .neq("id", typedReport.id)
+    .order("report_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   const sectionMap: Record<string, string[]> = {
     consultant_feedback: [],
     client_feedback: [],
@@ -106,7 +116,7 @@ export default async function EditReportPage({
           {typedReport.type === "kickoff" ? "CR Demarrage" : "CR Suivi"} - {typedMission.consultant_first_name} {typedMission.consultant_last_name}
         </h2>
         <p className="mt-1 text-slate-600">Client : {typedMission.client_name}</p>
-        <p className="text-slate-600">Date CR : {toFrenchDate(typedReport.report_date)}</p>
+        <p className="text-slate-600">Date du suivi : {toFrenchDate(typedReport.report_date)}</p>
         {typedReport.consultant_last_edited_at ? (
           <p className="text-slate-600">
             Modifie par le consultant le {toFrenchDate(typedReport.consultant_last_edited_at)}
@@ -129,20 +139,20 @@ export default async function EditReportPage({
           <h3 className="text-lg font-semibold text-slate-900">Informations generales</h3>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
             <label className="text-sm text-slate-700">
-              Date du CR
+              Date du suivi de mission
               <input name="report_date" type="date" required defaultValue={typedReport.report_date} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
             </label>
             <label className="text-sm text-slate-700">
-              Dernier suivi
+              Date du dernier suivi de mission
               <input
                 name="last_followup_date"
                 type="date"
-                defaultValue={typedReport.last_followup_date ?? ""}
+                defaultValue={typedReport.last_followup_date ?? previousReport?.report_date ?? ""}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
               />
             </label>
             <label className="text-sm text-slate-700">
-              Prochain suivi
+              Date du prochain suivi planifie
               <input
                 name="next_followup_date"
                 type="date"
