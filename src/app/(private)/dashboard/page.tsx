@@ -18,6 +18,7 @@ type MissionMarginRow = {
   tjm: number | null;
   cj: number | null;
   consultant_type: string;
+  next_followup_date: string | null;
 };
 
 type AlertBadge = {
@@ -98,7 +99,7 @@ function getMarginBadge(margin: MissionMarginRow | undefined): AlertBadge | null
   if (rounded < 20) {
     return { label, classes: "bg-red-50 text-red-700 border-red-200", severity: "red" };
   }
-  if (rounded < 30) {
+  if (rounded < 25) {
     return { label, classes: "bg-amber-50 text-amber-700 border-amber-200", severity: "orange" };
   }
   return null;
@@ -153,7 +154,7 @@ export default async function DashboardPage() {
           "mission_id,consultant_first_name,consultant_last_name,client_name,start_date,follow_up_frequency_days,latest_report_date,next_followup_date",
         )
         .order("next_followup_date", { ascending: true }),
-      supabase.from("missions").select("id,tjm,cj,consultant_type"),
+      supabase.from("missions").select("id,tjm,cj,consultant_type,next_followup_date"),
     ]);
 
   if (healthError) {
@@ -169,10 +170,15 @@ export default async function DashboardPage() {
 
   const alerts = ((healthRows ?? []) as MissionAlertRow[])
     .map((row) => {
-      const marginAlert = getMarginAlert(marginsByMissionId.get(row.mission_id));
+      const missionMeta = marginsByMissionId.get(row.mission_id);
+      const rowWithMissionNextFollowup = {
+        ...row,
+        next_followup_date: missionMeta?.next_followup_date ?? row.next_followup_date,
+      };
+      const marginAlert = getMarginAlert(missionMeta);
       const marginBadge = marginAlert.badge;
       const durationBadge = getMissionDurationBadge(row.start_date);
-      const planningBadge = getPlanningBadge(row);
+      const planningBadge = getPlanningBadge(rowWithMissionNextFollowup);
       const badges = [marginBadge, durationBadge, planningBadge].filter((badge): badge is AlertBadge => badge !== null);
       if (badges.length === 0) {
         return null;
@@ -208,7 +214,14 @@ export default async function DashboardPage() {
       );
     });
 
-  const followupsToPlanCount = ((healthRows ?? []) as MissionAlertRow[]).filter((row) => getPlanningBadge(row) !== null).length;
+  const followupsToPlanCount = ((healthRows ?? []) as MissionAlertRow[]).filter((row) => {
+    const missionMeta = marginsByMissionId.get(row.mission_id);
+    const rowWithMissionNextFollowup = {
+      ...row,
+      next_followup_date: missionMeta?.next_followup_date ?? row.next_followup_date,
+    };
+    return getPlanningBadge(rowWithMissionNextFollowup) !== null;
+  }).length;
   const activeMissionsCount = activeMissions ?? 0;
   const alertsPercentage = activeMissionsCount > 0 ? Math.round((alerts.length / activeMissionsCount) * 100) : 0;
   const followupsToPlanRatio = activeMissionsCount > 0 ? (followupsToPlanCount / activeMissionsCount) * 100 : 0;

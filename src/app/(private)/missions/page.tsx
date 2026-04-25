@@ -129,7 +129,7 @@ export default async function MissionsPage() {
     if (rounded < 20) {
       return { label, classes: "bg-red-50 text-red-700 border-red-200" };
     }
-    if (rounded < 30) {
+    if (rounded < 25) {
       return { label, classes: "bg-amber-50 text-amber-700 border-amber-200" };
     }
     return { label, classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
