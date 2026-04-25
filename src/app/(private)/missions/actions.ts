@@ -13,17 +13,31 @@ function normalizeClientName(value: string) {
   return value.trim().toLocaleUpperCase("fr-FR");
 }
 
+function normalizeConsultantLastName(value: string) {
+  return value.trim().toLocaleUpperCase("fr-FR");
+}
+
 function normalizeOptionalDate(value: string | null | undefined) {
   const trimmed = (value ?? "").trim();
   if (!trimmed) return null;
   return trimmed;
 }
 
+function normalizeOptionalNumeric(value: string | null | undefined) {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    throw new Error("Valeur numerique invalide.");
+  }
+  return parsed;
+}
+
 export async function createMissionAction(formData: FormData) {
   const { supabase, user } = await requireAdminSession();
 
   const consultantFirstName = String(formData.get("consultant_first_name") ?? "").trim();
-  const consultantLastName = String(formData.get("consultant_last_name") ?? "").trim();
+  const consultantLastName = normalizeConsultantLastName(String(formData.get("consultant_last_name") ?? ""));
   const consultantType = String(formData.get("consultant_type") ?? "").trim();
   const consultantEmail = String(formData.get("consultant_email") ?? "").trim();
   const clientName = normalizeClientName(String(formData.get("client_name") ?? ""));
@@ -31,6 +45,8 @@ export async function createMissionAction(formData: FormData) {
   const startDate = String(formData.get("start_date") ?? "").trim();
   const lastFollowupDate = String(formData.get("last_followup_date") ?? "").trim();
   const nextFollowupDate = String(formData.get("next_followup_date") ?? "").trim();
+  const tjm = normalizeOptionalNumeric(String(formData.get("tjm") ?? ""));
+  const cj = normalizeOptionalNumeric(String(formData.get("cj") ?? ""));
   const frequency = Number(formData.get("follow_up_frequency_days") ?? 90);
 
   if (!consultantFirstName || !consultantLastName || !consultantType || !consultantEmail || !clientName || !startDate) {
@@ -55,6 +71,8 @@ export async function createMissionAction(formData: FormData) {
       client_operational_contact: clientOperationalContact || null,
       last_followup_date: lastFollowupDate || null,
       next_followup_date: nextFollowupDate || null,
+      tjm,
+      cj,
       // Keep DB compatibility (current column is NOT NULL) while client emails are handled manually.
       client_contact_email: "manual-client-send@local.invalid",
       start_date: startDate,
@@ -166,7 +184,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
   const { supabase } = await requireAdminSession();
   const missionId = String(formData.get("mission_id") ?? "");
   const consultantFirstName = String(formData.get("consultant_first_name") ?? "").trim();
-  const consultantLastName = String(formData.get("consultant_last_name") ?? "").trim();
+  const consultantLastName = normalizeConsultantLastName(String(formData.get("consultant_last_name") ?? ""));
   const consultantType = String(formData.get("consultant_type") ?? "").trim();
   const consultantEmail = String(formData.get("consultant_email") ?? "").trim();
   const clientName = normalizeClientName(String(formData.get("client_name") ?? ""));
@@ -174,6 +192,8 @@ export async function updateMissionIdentityAction(formData: FormData) {
   const startDate = String(formData.get("start_date") ?? "").trim();
   const lastFollowupDate = String(formData.get("last_followup_date") ?? "").trim();
   const nextFollowupDate = String(formData.get("next_followup_date") ?? "").trim();
+  const tjm = normalizeOptionalNumeric(String(formData.get("tjm") ?? ""));
+  const cj = normalizeOptionalNumeric(String(formData.get("cj") ?? ""));
   const frequencyRaw = String(formData.get("follow_up_frequency_days") ?? "").trim();
   const existingFrequency = Number(formData.get("existing_follow_up_frequency_days") ?? 90);
   const followUpFrequencyDays = frequencyRaw === "custom" ? existingFrequency : Number(frequencyRaw);
@@ -203,6 +223,8 @@ export async function updateMissionIdentityAction(formData: FormData) {
       start_date: startDate,
       last_followup_date: lastFollowupDate || null,
       next_followup_date: nextFollowupDate || null,
+      tjm,
+      cj,
       follow_up_frequency_days: followUpFrequencyDays,
     })
     .eq("id", missionId);

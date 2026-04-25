@@ -59,7 +59,12 @@ export default async function MissionsPage() {
         <h3 className="text-lg font-semibold text-slate-900">Nouvelle mission</h3>
         <form action={createMissionAction} className="mt-4 grid gap-3 md:grid-cols-2">
           <input name="consultant_first_name" required placeholder="Prenom consultant" className="rounded-md border border-slate-300 px-3 py-2" />
-          <input name="consultant_last_name" required placeholder="Nom consultant" className="rounded-md border border-slate-300 px-3 py-2" />
+          <UppercaseInput
+            name="consultant_last_name"
+            required
+            placeholder="Nom consultant"
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
           <label className="text-sm text-slate-700 md:col-span-2">
             Type de consultant
             <select
@@ -119,6 +124,28 @@ export default async function MissionsPage() {
               <option value="120">Tous les 4 mois (120 jours)</option>
               <option value="150">Tous les 5 mois (150 jours)</option>
             </select>
+          </label>
+          <label className="text-sm text-slate-700">
+            TJM (€ HT)
+            <input
+              name="tjm"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Ex: 650"
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+          </label>
+          <label className="text-sm text-slate-700">
+            CJ (€ HT)
+            <input
+              name="cj"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Ex: 750"
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+            />
           </label>
           <button
             type="submit"

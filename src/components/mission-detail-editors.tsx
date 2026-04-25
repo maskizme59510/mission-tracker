@@ -14,6 +14,8 @@ type MissionIdentityEditorProps = {
   initialStartDate: string;
   initialLastFollowupDate: string | null;
   initialNextFollowupDate: string | null;
+  initialTjm: number | null;
+  initialCj: number | null;
   initialFollowUpFrequencyDays: number;
   action: (formData: FormData) => void | Promise<void>;
 };
@@ -36,6 +38,8 @@ export function MissionIdentityEditor({
   initialStartDate,
   initialLastFollowupDate,
   initialNextFollowupDate,
+  initialTjm,
+  initialCj,
   initialFollowUpFrequencyDays,
   action,
 }: Readonly<MissionIdentityEditorProps>) {
@@ -70,7 +74,7 @@ export function MissionIdentityEditor({
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           placeholder="Prenom consultant"
         />
-        <input
+        <UppercaseInput
           name="consultant_last_name"
           defaultValue={initialConsultantLastName}
           required
@@ -125,6 +129,24 @@ export function MissionIdentityEditor({
           type="date"
           defaultValue={initialNextFollowupDate ?? ""}
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+        <input
+          name="tjm"
+          type="number"
+          min="0"
+          step="0.01"
+          defaultValue={initialTjm ?? ""}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          placeholder="TJM (€ HT)"
+        />
+        <input
+          name="cj"
+          type="number"
+          min="0"
+          step="0.01"
+          defaultValue={initialCj ?? ""}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          placeholder="CJ (€ HT)"
         />
         <select
           name="follow_up_frequency_days"

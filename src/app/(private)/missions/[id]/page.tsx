@@ -26,6 +26,8 @@ type Mission = {
   follow_up_frequency_days: number;
   last_followup_date: string | null;
   next_followup_date: string | null;
+  tjm: number | null;
+  cj: number | null;
 };
 
 type Report = {
@@ -120,6 +122,8 @@ export default async function MissionDetailPage({
             initialStartDate={typedMission.start_date}
             initialLastFollowupDate={typedMission.last_followup_date}
             initialNextFollowupDate={typedMission.next_followup_date}
+            initialTjm={typedMission.tjm}
+            initialCj={typedMission.cj}
             initialFollowUpFrequencyDays={typedMission.follow_up_frequency_days}
             action={updateMissionIdentityAction}
           />
