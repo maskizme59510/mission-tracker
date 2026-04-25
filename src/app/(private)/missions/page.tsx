@@ -58,7 +58,7 @@ function getMissionDurationBadge(startDate: string) {
 
 function getPlanningBadge(mission: MissionRow) {
   if (mission.next_followup_date) {
-    return { label: "🟢 Planifie", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    return { label: "🟢 Planifié", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
   }
 
   const baselineDate = mission.latest_report_date ?? null;
