@@ -26,6 +26,11 @@ type AlertBadge = {
   severity: "red" | "orange";
 };
 
+type MarginAlert = {
+  badge: AlertBadge | null;
+  percent: number | null;
+};
+
 function getMissionDurationBadge(startDate: string): AlertBadge | null {
   const start = new Date(startDate);
   const now = new Date();
@@ -103,6 +108,25 @@ function getMarginBadge(margin: MissionMarginRow | undefined): AlertBadge | null
   return null;
 }
 
+function getMarginAlert(margin: MissionMarginRow | undefined): MarginAlert {
+  if (!margin || margin.tjm === null || margin.cj === null || margin.tjm <= 0) {
+    return { badge: null, percent: null };
+  }
+
+  const marginPercent = ((margin.tjm - margin.cj) / margin.tjm) * 100;
+  const rounded = Math.round(marginPercent * 10) / 10;
+  return {
+    badge: getMarginBadge(margin),
+    percent: rounded,
+  };
+}
+
+function getElapsedMonths(startDate: string): number {
+  const start = new Date(startDate);
+  const now = new Date();
+  return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()));
+}
+
 export default async function DashboardPage() {
   const { supabase } = await requireAdminSession();
 
@@ -151,7 +175,8 @@ export default async function DashboardPage() {
 
   const alerts = ((healthRows ?? []) as MissionAlertRow[])
     .map((row) => {
-      const marginBadge = getMarginBadge(marginsByMissionId.get(row.mission_id));
+      const marginAlert = getMarginAlert(marginsByMissionId.get(row.mission_id));
+      const marginBadge = marginAlert.badge;
       const durationBadge = getMissionDurationBadge(row.start_date);
       const planningBadge = getPlanningBadge(row);
       const badges = [marginBadge, durationBadge, planningBadge].filter((badge): badge is AlertBadge => badge !== null);
@@ -159,15 +184,35 @@ export default async function DashboardPage() {
         return null;
       }
 
-      const hasRed = badges.some((badge) => badge.severity === "red");
+      const marginRank = marginBadge?.severity === "red" ? 0 : marginBadge?.severity === "orange" ? 1 : 2;
       return {
         ...row,
         badges,
-        priority: hasRed ? 1 : 2,
+        marginRank,
+        marginPercent: marginAlert.percent,
+        elapsedMonths: getElapsedMonths(row.start_date),
       };
     })
     .filter((alert): alert is NonNullable<typeof alert> => alert !== null)
-    .sort((a, b) => a.priority - b.priority);
+    .sort((a, b) => {
+      if (a.marginRank !== b.marginRank) {
+        return a.marginRank - b.marginRank;
+      }
+
+      if (a.marginRank < 2 && a.marginPercent !== b.marginPercent) {
+        return (a.marginPercent ?? Number.POSITIVE_INFINITY) - (b.marginPercent ?? Number.POSITIVE_INFINITY);
+      }
+
+      if (a.elapsedMonths !== b.elapsedMonths) {
+        return b.elapsedMonths - a.elapsedMonths;
+      }
+
+      return `${a.consultant_last_name} ${a.consultant_first_name}`.localeCompare(
+        `${b.consultant_last_name} ${b.consultant_first_name}`,
+        "fr",
+        { sensitivity: "base" },
+      );
+    });
 
   return (
     <section className="space-y-6">
