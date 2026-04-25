@@ -9,6 +9,9 @@ type MissionRow = {
   consultant_first_name: string;
   consultant_last_name: string;
   client_name: string;
+  start_date: string;
+  follow_up_frequency_days: number;
+  latest_report_date: string | null;
   mission_status: "active" | "paused" | "closed";
   next_followup_date: string | null;
   is_follow_up_overdue: boolean | null;
@@ -17,10 +20,27 @@ type MissionRow = {
   health_color: "red" | "yellow" | "green" | null;
 };
 
-function badgeColor(healthColor: MissionRow["health_color"]) {
-  if (healthColor === "red") return "bg-red-50 text-red-700 border-red-200";
-  if (healthColor === "yellow") return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-emerald-50 text-emerald-700 border-emerald-200";
+function getPlanningBadge(mission: MissionRow) {
+  if (mission.next_followup_date) {
+    return { label: "🟢 Planifie", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  }
+
+  const baselineDate = mission.latest_report_date ?? mission.start_date ?? null;
+  if (!baselineDate) {
+    return { label: "🟠 A planifier", classes: "bg-amber-50 text-amber-700 border-amber-200" };
+  }
+
+  const baseline = new Date(`${baselineDate}T00:00:00`);
+  const today = new Date();
+  const msInDay = 24 * 60 * 60 * 1000;
+  const elapsedDays = Math.floor((today.getTime() - baseline.getTime()) / msInDay);
+  const frequencyDays = mission.follow_up_frequency_days > 0 ? mission.follow_up_frequency_days : 90;
+
+  if (elapsedDays > frequencyDays) {
+    return { label: "🔴 A planifier", classes: "bg-red-50 text-red-700 border-red-200" };
+  }
+
+  return { label: "🟠 A planifier", classes: "bg-amber-50 text-amber-700 border-amber-200" };
 }
 
 export default async function MissionsPage() {
@@ -177,33 +197,30 @@ export default async function MissionsPage() {
                         { sensitivity: "base" },
                       ),
                     )
-                    .map((mission) => (
-                      <div key={mission.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
-                        <div>
-                          <Link
-                            href={`/missions/${mission.mission_id}`}
-                            className="font-medium text-slate-900 underline-offset-2 hover:underline"
-                          >
-                            {mission.consultant_first_name} {mission.consultant_last_name}
-                          </Link>
-                          <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
+                    .map((mission) => {
+                      const planningBadge = getPlanningBadge(mission);
+                      return (
+                        <div key={mission.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+                          <div>
+                            <Link
+                              href={`/missions/${mission.mission_id}`}
+                              className="font-medium text-slate-900 underline-offset-2 hover:underline"
+                            >
+                              {mission.consultant_first_name} {mission.consultant_last_name}
+                            </Link>
+                            <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`rounded-full border px-2 py-1 text-xs font-medium ${planningBadge.classes}`}>
+                              {planningBadge.label}
+                            </span>
+                            <Link href={`/missions/${mission.mission_id}`} className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
+                              Ouvrir
+                            </Link>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`rounded-full border px-2 py-1 text-xs font-medium ${badgeColor(mission.health_color)}`}>
-                            {mission.is_follow_up_overdue
-                              ? "Suivi en retard"
-                              : mission.is_pending_validation_over_5_days
-                                ? "Validation en attente > 5 jours"
-                                : mission.is_follow_up_within_14_days
-                                  ? "Suivi dans moins de 14 jours"
-                                  : "Mission a jour"}
-                          </span>
-                          <Link href={`/missions/${mission.mission_id}`} className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
-                            Ouvrir
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
             ))}
