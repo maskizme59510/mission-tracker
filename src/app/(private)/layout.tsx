@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { isSupabaseConfigured } from "@/lib/env";
 import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getUserProfile, getTeamMemberIds } from "@/lib/rbac";
+import { getUserProfile } from "@/lib/rbac";
+import { fetchTeamCommercialsForManager } from "@/lib/team-commercials";
 
 export default async function PrivateLayout({
   children,
@@ -22,8 +23,7 @@ export default async function PrivateLayout({
   }
 
   const profile = await getUserProfile(supabase, user);
-  const teamMemberIds = profile.role === "responsable" ? await getTeamMemberIds(supabase, user.id) : [];
-  const showTeamMissions = profile.role === "responsable" && teamMemberIds.length > 0;
+  const teamCommercials = profile.role === "responsable" ? await fetchTeamCommercialsForManager(supabase, user.id) : [];
   const showAllMissions = profile.role === "directeur";
   const showAdmin = profile.role === "responsable" || profile.role === "directeur";
 
@@ -42,11 +42,15 @@ export default async function PrivateLayout({
             <Link className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/missions">
               Mes Missions
             </Link>
-            {showTeamMissions ? (
-              <Link className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/missions/equipe">
-                Missions de l&apos;equipe
+            {teamCommercials.map((commercial) => (
+              <Link
+                key={commercial.id}
+                className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+                href={`/missions/commercial/${encodeURIComponent(commercial.user_code)}`}
+              >
+                Missions {commercial.user_code}
               </Link>
-            ) : null}
+            ))}
             {showAllMissions ? (
               <Link className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/missions/toutes">
                 Toutes les missions

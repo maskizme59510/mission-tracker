@@ -13,6 +13,7 @@ type MissionIdentityEditorProps = {
   initialConsultantEmail: string;
   initialClientName: string;
   initialCommercial: string | null;
+  commercialUserCodes: string[];
   initialClientOperationalContact: string | null;
   initialStartDate: string;
   initialTjm: number | null;
@@ -36,6 +37,7 @@ export function MissionIdentityEditor({
   initialConsultantEmail,
   initialClientName,
   initialCommercial,
+  commercialUserCodes,
   initialClientOperationalContact,
   initialStartDate,
   initialTjm,
@@ -48,6 +50,12 @@ export function MissionIdentityEditor({
   const initialFrequencyValue = knownFrequencies.includes(initialFollowUpFrequencyDays)
     ? String(initialFollowUpFrequencyDays)
     : "custom";
+
+  const initialNorm = initialCommercial?.trim().toLocaleUpperCase("fr-FR") ?? "";
+  const commercialSelectDefault =
+    initialNorm && commercialUserCodes.includes(initialNorm)
+      ? initialNorm
+      : (commercialUserCodes[0] ?? "");
 
   if (!editing) {
     return (
@@ -105,12 +113,22 @@ export function MissionIdentityEditor({
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           placeholder="Nom de l'enseigne"
         />
-        <UppercaseInput
-          name="commercial"
-          defaultValue={initialCommercial ?? ""}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-          placeholder="Commercial"
-        />
+        <label className="flex flex-col gap-1 text-sm text-slate-700">
+          <span>Commercial</span>
+          <select
+            name="commercial"
+            defaultValue={commercialSelectDefault}
+            required={commercialUserCodes.length > 0}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          >
+            {commercialUserCodes.length === 0 ? <option value="">—</option> : null}
+            {commercialUserCodes.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
+        </label>
         <input
           name="client_operational_contact"
           defaultValue={initialClientOperationalContact ?? ""}

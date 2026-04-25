@@ -14,6 +14,7 @@ import {
   updateMissionIdentityAction,
   updateMissionNextFollowupAction,
 } from "@/app/(private)/missions/actions";
+import { fetchProfileCommercialUserCodes } from "@/lib/profile-commercial-codes";
 
 type Mission = {
   id: string;
@@ -94,6 +95,14 @@ export default async function MissionDetailPage({
   const typedMission = mission as Mission;
   const typedReports = (reports ?? []) as Report[];
 
+  const commercialUserCodesRaw = await fetchProfileCommercialUserCodes(supabase);
+  const commercialSet = new Set(commercialUserCodesRaw);
+  const currentCommercial = typedMission.commercial?.trim().toLocaleUpperCase("fr-FR");
+  if (currentCommercial) {
+    commercialSet.add(currentCommercial);
+  }
+  const commercialUserCodes = [...commercialSet].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+
   const latestReport = typedReports[0] ?? null;
   const lastFollowupDisplayDate = latestReport?.report_date ?? null;
   const nextPlannedDate = typedMission.next_followup_date ?? (latestReport?.next_followup_date ?? null);
@@ -117,6 +126,7 @@ export default async function MissionDetailPage({
             initialConsultantEmail={typedMission.consultant_email}
             initialClientName={typedMission.client_name}
             initialCommercial={typedMission.commercial}
+            commercialUserCodes={commercialUserCodes}
             initialClientOperationalContact={typedMission.client_operational_contact}
             initialStartDate={typedMission.start_date}
             initialTjm={typedMission.tjm}
