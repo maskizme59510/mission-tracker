@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isSupabaseConfigured } from "@/lib/env";
+import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function PrivateLayout({
@@ -35,12 +36,10 @@ export default async function PrivateLayout({
               Missions
             </Link>
             <form action="/api/auth/logout" method="post">
-              <button
-                type="submit"
+              <LoadingSubmitButton
+                label="Se deconnecter"
                 className="rounded-md border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-100"
-              >
-                Se deconnecter
-              </button>
+              />
             </form>
           </nav>
         </div>

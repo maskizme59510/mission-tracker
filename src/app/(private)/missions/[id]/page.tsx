@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
 import { DeleteReportButton } from "@/components/delete-report-button";
 import { InlineReportStatusSelect } from "@/components/inline-report-status-select";
+import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { MissionIdentityEditor, NextFollowupEditor } from "@/components/mission-detail-editors";
 import { toFrenchDate } from "@/lib/format";
 import { DeleteMissionButton } from "@/components/delete-mission-button";
@@ -171,9 +172,10 @@ export default async function MissionDetailPage({
         ) : null}
         <form action={createFollowupReportAction} className="mt-4">
           <input type="hidden" name="mission_id" value={typedMission.id} />
-          <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
-            Creer un nouveau CR
-          </button>
+          <LoadingSubmitButton
+            label="Creer un nouveau CR"
+            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          />
         </form>
       </article>
 

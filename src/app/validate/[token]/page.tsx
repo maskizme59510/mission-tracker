@@ -2,6 +2,7 @@ import { buildReportBody } from "@/lib/report-template";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { fromLines } from "@/lib/format";
 import { hashToken } from "@/lib/tokens";
+import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { confirmConsultantValidationAction, saveConsultantEditsAction } from "@/app/validate/[token]/actions";
 
 type SectionType = "consultant_feedback" | "client_feedback" | "next_objectives" | "training";
@@ -191,22 +192,18 @@ export default async function ValidateReportPage({
               />
             </label>
 
-            <button
-              type="submit"
+            <LoadingSubmitButton
+              label="Enregistrer les modifications"
               className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Enregistrer les modifications
-            </button>
+            />
           </form>
 
           <form action={confirmConsultantValidationAction} className="mt-3">
             <input type="hidden" name="token" value={token} />
-            <button
-              type="submit"
+            <LoadingSubmitButton
+              label="Je valide ce compte-rendu"
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              Je valide ce compte-rendu
-            </button>
+            />
           </form>
         </article>
       ) : null}

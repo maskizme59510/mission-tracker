@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CapitalizeInput } from "@/components/capitalize-input";
+import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { UppercaseInput } from "@/components/uppercase-input";
 
 type MissionIdentityEditorProps = {
@@ -115,6 +116,7 @@ export function MissionIdentityEditor({
         <input
           name="start_date"
           type="date"
+          title="Date de démarrage de mission"
           defaultValue={initialStartDate ? initialStartDate.slice(0, 10) : ""}
           required
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -122,12 +124,14 @@ export function MissionIdentityEditor({
         <input
           name="last_followup_date"
           type="date"
+          title="Date du dernier suivi de mission"
           defaultValue={initialLastFollowupDate ?? ""}
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
         <input
           name="next_followup_date"
           type="date"
+          title="Date du prochain suivi planifié"
           defaultValue={initialNextFollowupDate ?? ""}
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
@@ -163,9 +167,10 @@ export function MissionIdentityEditor({
         </select>
       </div>
       <div className="flex gap-2">
-        <button type="submit" className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
-          Enregistrer
-        </button>
+        <LoadingSubmitButton
+          label="Enregistrer"
+          className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        />
         <button
           type="button"
           onClick={() => setEditing(false)}
@@ -223,9 +228,10 @@ export function NextFollowupEditor({
         defaultValue={initialNextFollowupDate ?? ""}
         className="rounded-md border border-slate-300 px-3 py-2 text-sm"
       />
-      <button type="submit" className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
-        Enregistrer
-      </button>
+      <LoadingSubmitButton
+        label="Enregistrer"
+        className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+      />
       <button
         type="button"
         onClick={() => setEditing(false)}

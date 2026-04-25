@@ -3,6 +3,7 @@ import { requireAdminSession } from "@/lib/auth";
 import { toFrenchDate } from "@/lib/format";
 import { createMissionAction } from "@/app/(private)/missions/actions";
 import { ConsultantContactFields } from "@/components/consultant-contact-fields";
+import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { UppercaseInput } from "@/components/uppercase-input";
 
 type MissionRow = {
@@ -194,12 +195,10 @@ export default async function MissionsPage() {
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
             />
           </label>
-          <button
-            type="submit"
+          <LoadingSubmitButton
+            label="Valider"
             className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 md:col-span-2 md:w-fit"
-          >
-            Valider
-          </button>
+          />
         </form>
       </article>
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
 import { ReportStatusSelect } from "@/components/report-status-select";
+import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { SaveCrFeedback } from "@/components/save-cr-feedback";
 import { SaveCrSubmitButton } from "@/components/save-cr-submit-button";
 import { fromLines, toFrenchDate } from "@/lib/format";
@@ -226,9 +227,10 @@ export default async function EditReportPage({
         <form action={sendToConsultantAction} className="mt-4 flex items-center gap-3">
           <input type="hidden" name="report_id" value={typedReport.id} />
           <input type="hidden" name="mission_id" value={typedReport.mission_id} />
-          <button type="submit" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-            Envoyer au consultant
-          </button>
+          <LoadingSubmitButton
+            label="Envoyer au consultant"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+          />
         </form>
         {lastEmailLog?.provider_message_id?.startsWith("preview:") ? (
           <p className="mt-3 text-sm text-slate-700">
