@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { requireAdminSession } from "@/lib/auth";
 
 function isValidEmail(value: string) {
@@ -111,6 +112,9 @@ export async function createFollowupReportAction(formData: FormData) {
     revalidatePath(`/missions/${missionId}`);
     redirect(`/reports/${createdReport.id}/edit`);
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
     const message =
       error instanceof Error && error.message
         ? error.message
