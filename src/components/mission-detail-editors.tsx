@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CapitalizeInput } from "@/components/capitalize-input";
 import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { UppercaseInput } from "@/components/uppercase-input";
+import { normalizeCommercial } from "@/lib/commercial";
 
 type MissionIdentityEditorProps = {
   missionId: string;
@@ -13,7 +14,6 @@ type MissionIdentityEditorProps = {
   initialConsultantEmail: string;
   initialClientName: string;
   initialCommercial: string | null;
-  commercialUserCodes: string[];
   initialClientOperationalContact: string | null;
   initialStartDate: string;
   initialTjm: number | null;
@@ -37,7 +37,6 @@ export function MissionIdentityEditor({
   initialConsultantEmail,
   initialClientName,
   initialCommercial,
-  commercialUserCodes,
   initialClientOperationalContact,
   initialStartDate,
   initialTjm,
@@ -51,11 +50,8 @@ export function MissionIdentityEditor({
     ? String(initialFollowUpFrequencyDays)
     : "custom";
 
-  const initialNorm = initialCommercial?.trim().toLocaleUpperCase("fr-FR") ?? "";
-  const commercialSelectDefault =
-    initialNorm && commercialUserCodes.includes(initialNorm)
-      ? initialNorm
-      : (commercialUserCodes[0] ?? "");
+  const commercialDisplay = normalizeCommercial(initialCommercial) ?? "";
+  const commercialHiddenValue = commercialDisplay;
 
   if (!editing) {
     return (
@@ -74,6 +70,7 @@ export function MissionIdentityEditor({
     <form action={action} className="mt-4 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
       <input type="hidden" name="mission_id" value={missionId} />
       <input type="hidden" name="existing_follow_up_frequency_days" value={initialFollowUpFrequencyDays} />
+      <input type="hidden" name="commercial" value={commercialHiddenValue} />
       <div className="grid gap-2 md:grid-cols-2">
         <CapitalizeInput
           name="consultant_first_name"
@@ -114,20 +111,10 @@ export function MissionIdentityEditor({
           placeholder="Nom de l'enseigne"
         />
         <label className="flex flex-col gap-1 text-sm text-slate-700">
-          <span>Commercial</span>
-          <select
-            name="commercial"
-            defaultValue={commercialSelectDefault}
-            required={commercialUserCodes.length > 0}
-            className="rounded-md border border-slate-300 px-3 py-2"
-          >
-            {commercialUserCodes.length === 0 ? <option value="">—</option> : null}
-            {commercialUserCodes.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
+          <span>Commercial (propriétaire)</span>
+          <div className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-slate-800">
+            {commercialDisplay || "Non renseigne"}
+          </div>
         </label>
         <input
           name="client_operational_contact"

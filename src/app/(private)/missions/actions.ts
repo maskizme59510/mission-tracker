@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { requireAdminSession } from "@/lib/auth";
 import { deriveCommercialFromUser, normalizeCommercial } from "@/lib/commercial";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -240,8 +241,23 @@ export async function deleteReportAction(formData: FormData) {
   revalidatePath("/missions");
 }
 
-export async function updateMissionIdentityAction(formData: FormData) {
-  const { supabase } = await requireAdminSession();
+type MissionIdentityUpdatePayload = {
+  consultant_first_name: string;
+  consultant_last_name: string;
+  consultant_type: string;
+  consultant_email: string;
+  client_name: string;
+  commercial: string | null;
+  client_operational_contact: string | null;
+  start_date: string;
+  tjm: number | null;
+  cj: number | null;
+  follow_up_frequency_days: number;
+  last_followup_date?: string | null;
+  next_followup_date?: string | null;
+};
+
+function parseMissionIdentityUpdateFromForm(formData: FormData): { missionId: string; updatePayload: MissionIdentityUpdatePayload } {
   const missionId = String(formData.get("mission_id") ?? "");
   const consultantFirstName = normalizeConsultantFirstName(String(formData.get("consultant_first_name") ?? ""));
   const consultantLastName = normalizeConsultantLastName(String(formData.get("consultant_last_name") ?? ""));
@@ -274,21 +290,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
     throw new Error("Frequence de suivi invalide.");
   }
 
-  const updatePayload: {
-    consultant_first_name: string;
-    consultant_last_name: string;
-    consultant_type: string;
-    consultant_email: string;
-    client_name: string;
-    commercial: string | null;
-    client_operational_contact: string | null;
-    start_date: string;
-    tjm: number | null;
-    cj: number | null;
-    follow_up_frequency_days: number;
-    last_followup_date?: string | null;
-    next_followup_date?: string | null;
-  } = {
+  const updatePayload: MissionIdentityUpdatePayload = {
     consultant_first_name: consultantFirstName,
     consultant_last_name: consultantLastName,
     consultant_type: consultantType,
@@ -308,6 +310,13 @@ export async function updateMissionIdentityAction(formData: FormData) {
     updatePayload.next_followup_date = nextFollowupDate || null;
   }
 
+  return { missionId, updatePayload };
+}
+
+export async function updateMissionIdentityAction(formData: FormData) {
+  const { supabase } = await requireAdminSession();
+  const { missionId, updatePayload } = parseMissionIdentityUpdateFromForm(formData);
+
   const { error } = await supabase.from("missions").update(updatePayload).eq("id", missionId);
 
   if (error) {
@@ -317,6 +326,71 @@ export async function updateMissionIdentityAction(formData: FormData) {
   revalidatePath(`/missions/${missionId}`);
   revalidatePath("/missions");
   redirect(`/missions/${missionId}?missionUpdated=1`);
+}
+
+/**
+ * Transfert de mission : met a jour commercial + owner_id (profil du trigramme cible).
+ * Reserve au titulaire actuel (owner_id).
+ */
+export async function executeMissionTransferAction(formData: FormData) {
+  const missionId = String(formData.get("mission_id") ?? "");
+  const newCommercial = normalizeCommercial(String(formData.get("new_commercial") ?? ""));
+
+  if (!missionId) {
+    throw new Error("mission_id obligatoire.");
+  }
+  if (!newCommercial) {
+    throw new Error("Trigramme obligatoire.");
+  }
+
+  const { supabase, user } = await requireAdminSession();
+
+  const { data: mission, error: missionError } = await supabase
+    .from("missions")
+    .select("owner_id, commercial")
+    .eq("id", missionId)
+    .single();
+
+  if (missionError || !mission) {
+    throw new Error(missionError?.message ?? "Mission introuvable.");
+  }
+
+  if (mission.owner_id !== user.id) {
+    throw new Error("Seul le titulaire actuel de la mission peut transferer.");
+  }
+
+  const previousCommercial = normalizeCommercial(mission.commercial as string | null);
+  if ((previousCommercial ?? "") === newCommercial) {
+    throw new Error("Choisissez un autre commercial que le titulaire actuel.");
+  }
+
+  const profileClient = supabaseAdmin ?? supabase;
+  const { data: recipient, error: profileError } = await profileClient
+    .from("profiles")
+    .select("id")
+    .eq("user_code", newCommercial)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+  if (!recipient?.id) {
+    throw new Error(`Aucun profil utilisateur trouve pour le trigramme ${newCommercial}.`);
+  }
+
+  const dbClient = supabaseAdmin ?? supabase;
+  const { error: updateError } = await dbClient
+    .from("missions")
+    .update({ commercial: newCommercial, owner_id: recipient.id as string })
+    .eq("id", missionId)
+    .eq("owner_id", user.id);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/missions");
+  redirect("/missions");
 }
 
 export async function updateMissionNextFollowupAction(formData: FormData) {

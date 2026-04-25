@@ -5,6 +5,7 @@ import { DeleteReportButton } from "@/components/delete-report-button";
 import { InlineReportStatusSelect } from "@/components/inline-report-status-select";
 import { LoadingSubmitButton } from "@/components/loading-submit-button";
 import { MissionIdentityEditor, NextFollowupEditor } from "@/components/mission-detail-editors";
+import { MissionTransferButton } from "@/components/mission-transfer-button";
 import { toFrenchDate } from "@/lib/format";
 import { DeleteMissionButton } from "@/components/delete-mission-button";
 import {
@@ -18,6 +19,7 @@ import { fetchProfileCommercialUserCodes } from "@/lib/profile-commercial-codes"
 
 type Mission = {
   id: string;
+  owner_id: string;
   consultant_first_name: string;
   consultant_last_name: string;
   consultant_type: string;
@@ -75,7 +77,7 @@ export default async function MissionDetailPage({
 }) {
   const { id } = await params;
   const { createReport, createReportError } = await searchParams;
-  const { supabase } = await requireAdminSession();
+  const { supabase, user } = await requireAdminSession();
 
   const { data: mission, error: missionError } = await supabase
     .from("missions")
@@ -95,13 +97,9 @@ export default async function MissionDetailPage({
   const typedMission = mission as Mission;
   const typedReports = (reports ?? []) as Report[];
 
-  const commercialUserCodesRaw = await fetchProfileCommercialUserCodes(supabase);
-  const commercialSet = new Set(commercialUserCodesRaw);
-  const currentCommercial = typedMission.commercial?.trim().toLocaleUpperCase("fr-FR");
-  if (currentCommercial) {
-    commercialSet.add(currentCommercial);
-  }
-  const commercialUserCodes = [...commercialSet].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+  const allProfileCodes = await fetchProfileCommercialUserCodes(supabase);
+  const currentCommercialNorm = (typedMission.commercial ?? "").trim().toLocaleUpperCase("fr-FR");
+  const transferCandidateCodes = allProfileCodes.filter((code) => code !== currentCommercialNorm);
 
   const latestReport = typedReports[0] ?? null;
   const lastFollowupDisplayDate = latestReport?.report_date ?? null;
@@ -126,7 +124,6 @@ export default async function MissionDetailPage({
             initialConsultantEmail={typedMission.consultant_email}
             initialClientName={typedMission.client_name}
             initialCommercial={typedMission.commercial}
-            commercialUserCodes={commercialUserCodes}
             initialClientOperationalContact={typedMission.client_operational_contact}
             initialStartDate={typedMission.start_date}
             initialTjm={typedMission.tjm}
@@ -138,10 +135,15 @@ export default async function MissionDetailPage({
         <p className="mt-1 text-slate-600">Debut mission : {toFrenchDate(typedMission.start_date)}</p>
         <p className="text-slate-600">Commercial : {typedMission.commercial || "Non renseigne"}</p>
         <p className="text-slate-600">{missionDurationLabel(typedMission.start_date)}</p>
-        <form action={deleteMissionAction} className="mt-4">
-          <input type="hidden" name="mission_id" value={typedMission.id} />
-          <DeleteMissionButton />
-        </form>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {typedMission.owner_id === user.id && transferCandidateCodes.length > 0 ? (
+            <MissionTransferButton missionId={typedMission.id} candidateCodes={transferCandidateCodes} />
+          ) : null}
+          <form action={deleteMissionAction}>
+            <input type="hidden" name="mission_id" value={typedMission.id} />
+            <DeleteMissionButton />
+          </form>
+        </div>
         <p className="mt-2 text-xs text-slate-500">
           La suppression retire definitivement la mission, ses CR, participants, sections, tokens de validation et logs email associes.
         </p>
