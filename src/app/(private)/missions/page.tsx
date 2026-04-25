@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminSession } from "@/lib/auth";
 import { toFrenchDate } from "@/lib/format";
 import { createMissionAction } from "@/app/(private)/missions/actions";
+import { UppercaseInput } from "@/components/uppercase-input";
 
 type MissionRow = {
   mission_id: string;
@@ -75,7 +76,12 @@ export default async function MissionsPage() {
             </select>
           </label>
           <input name="consultant_email" type="email" required placeholder="Email consultant" className="rounded-md border border-slate-300 px-3 py-2" />
-          <input name="client_name" required placeholder="Nom de l'enseigne" className="rounded-md border border-slate-300 px-3 py-2" />
+          <UppercaseInput
+            name="client_name"
+            required
+            placeholder="Nom de l'enseigne"
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
           <input
             name="client_operational_contact"
             placeholder="Responsable de mission cote client (optionnel)"
@@ -147,9 +153,12 @@ export default async function MissionsPage() {
                     .map((mission) => (
                       <div key={mission.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
                         <div>
-                          <p className="font-medium text-slate-900">
+                          <Link
+                            href={`/missions/${mission.mission_id}`}
+                            className="font-medium text-slate-900 underline-offset-2 hover:underline"
+                          >
                             {mission.consultant_first_name} {mission.consultant_last_name}
-                          </p>
+                          </Link>
                           <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
                         </div>
                         <div className="flex items-center gap-2">

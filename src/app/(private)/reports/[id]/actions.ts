@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { requireAdminSession } from "@/lib/auth";
 import { toLines } from "@/lib/format";
 import { buildEmailIntro, buildReportBody } from "@/lib/report-template";
@@ -9,6 +10,34 @@ import { generateRawToken, hashToken } from "@/lib/tokens";
 
 const sections = ["consultant_feedback", "client_feedback", "next_objectives", "training"] as const;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const reportStatuses = ["draft", "pending_consultant_validation", "validated", "sent_to_client"] as const;
+type ReportStatus = (typeof reportStatuses)[number];
+
+export async function updateReportStatusAction(formData: FormData) {
+  const reportId = String(formData.get("report_id") ?? "");
+  const missionId = String(formData.get("mission_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+
+  if (!reportId || !missionId) {
+    throw new Error("report_id et mission_id sont obligatoires.");
+  }
+  if (!reportStatuses.includes(status as ReportStatus)) {
+    throw new Error("Statut invalide.");
+  }
+
+  const { supabase } = await requireAdminSession();
+  const { error } = await supabase
+    .from("mission_reports")
+    .update({ status: status as ReportStatus })
+    .eq("id", reportId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/reports/${reportId}/edit`);
+  revalidatePath(`/missions/${missionId}`);
+  revalidatePath("/missions");
+  revalidatePath("/dashboard");
+}
 
 export async function updateReportAction(formData: FormData) {
   const reportId = String(formData.get("report_id") ?? "");
@@ -23,8 +52,7 @@ export async function updateReportAction(formData: FormData) {
     const payload = {
       report_date: String(formData.get("report_date") ?? ""),
       last_followup_date: String(formData.get("last_followup_date") ?? "") || null,
-    next_followup_date: String(formData.get("next_followup_date") ?? "") || null,
-      status: String(formData.get("status") ?? "draft"),
+      next_followup_date: String(formData.get("next_followup_date") ?? "") || null,
     };
 
     const { error: reportError } = await supabase.from("mission_reports").update(payload).eq("id", reportId);
@@ -64,7 +92,8 @@ export async function updateReportAction(formData: FormData) {
     revalidatePath(`/missions/${missionId}`);
     revalidatePath("/missions");
     redirect(`/reports/${reportId}/edit?save=success`);
-  } catch {
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
     redirect(`/reports/${reportId}/edit?save=error`);
   }
 }

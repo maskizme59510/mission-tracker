@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
+import { ReportStatusSelect } from "@/components/report-status-select";
 import { SaveCrFeedback } from "@/components/save-cr-feedback";
 import { SaveCrSubmitButton } from "@/components/save-cr-submit-button";
 import { fromLines, toFrenchDate } from "@/lib/format";
@@ -149,15 +150,11 @@ export default async function EditReportPage({
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
               />
             </label>
-            <label className="text-sm text-slate-700">
-              Statut
-              <select name="status" defaultValue={typedReport.status} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
-                <option value="draft">Brouillon</option>
-                <option value="pending_consultant_validation">En attente validation consultant</option>
-                <option value="validated">Valide</option>
-                <option value="sent_to_client">Transmis client</option>
-              </select>
-            </label>
+            <ReportStatusSelect
+              reportId={typedReport.id}
+              missionId={typedReport.mission_id}
+              initialStatus={typedReport.status}
+            />
           </div>
         </article>
 

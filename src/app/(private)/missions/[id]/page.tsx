@@ -92,7 +92,11 @@ export default async function MissionDetailPage({
 
   const lastValidatedReport = typedReports.find((report) => report.status === "validated" || report.status === "sent_to_client");
   const lastFollowupDisplayDate = lastValidatedReport?.report_date ?? typedMission.last_followup_date ?? null;
-  const nextPlannedDate = typedMission.next_followup_date ?? null;
+  const latestReport = typedReports[0] ?? null;
+  const nextPlannedDate =
+    latestReport !== null
+      ? (latestReport.next_followup_date ?? null)
+      : (typedMission.next_followup_date ?? null);
 
   return (
     <section className="space-y-6">
@@ -181,9 +185,12 @@ export default async function MissionDetailPage({
           <div className="mt-4 space-y-2">
             {typedReports.map((report) => (
               <div key={report.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
-                <p className="text-sm text-slate-800">
+                <Link
+                  href={`/reports/${report.id}/edit`}
+                  className="text-sm text-slate-800 underline-offset-2 hover:underline"
+                >
                   {report.type === "kickoff" ? "CR Demarrage" : "CR Suivi"} - {toFrenchDate(report.report_date)}
-                </p>
+                </Link>
                 <div className="flex items-center gap-2">
                   <span className={`rounded-full border px-2 py-1 text-xs font-medium ${statusMeta(report.status).classes}`}>
                     {statusMeta(report.status).label}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { UppercaseInput } from "@/components/uppercase-input";
 
 type MissionIdentityEditorProps = {
   missionId: string;
@@ -93,7 +94,7 @@ export function MissionIdentityEditor({
           className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           placeholder="Email consultant"
         />
-        <input
+        <UppercaseInput
           name="client_name"
           defaultValue={initialClientName}
           required

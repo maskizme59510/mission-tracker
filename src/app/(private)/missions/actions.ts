@@ -9,6 +9,10 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function normalizeClientName(value: string) {
+  return value.trim().toLocaleUpperCase("fr-FR");
+}
+
 function normalizeOptionalDate(value: string | null | undefined) {
   const trimmed = (value ?? "").trim();
   if (!trimmed) return null;
@@ -22,7 +26,7 @@ export async function createMissionAction(formData: FormData) {
   const consultantLastName = String(formData.get("consultant_last_name") ?? "").trim();
   const consultantType = String(formData.get("consultant_type") ?? "").trim();
   const consultantEmail = String(formData.get("consultant_email") ?? "").trim();
-  const clientName = String(formData.get("client_name") ?? "").trim();
+  const clientName = normalizeClientName(String(formData.get("client_name") ?? ""));
   const clientOperationalContact = String(formData.get("client_operational_contact") ?? "").trim();
   const startDate = String(formData.get("start_date") ?? "").trim();
   const lastFollowupDate = String(formData.get("last_followup_date") ?? "").trim();
@@ -165,7 +169,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
   const consultantLastName = String(formData.get("consultant_last_name") ?? "").trim();
   const consultantType = String(formData.get("consultant_type") ?? "").trim();
   const consultantEmail = String(formData.get("consultant_email") ?? "").trim();
-  const clientName = String(formData.get("client_name") ?? "").trim();
+  const clientName = normalizeClientName(String(formData.get("client_name") ?? ""));
   const clientOperationalContact = String(formData.get("client_operational_contact") ?? "").trim();
   const startDate = String(formData.get("start_date") ?? "").trim();
   const lastFollowupDate = String(formData.get("last_followup_date") ?? "").trim();
