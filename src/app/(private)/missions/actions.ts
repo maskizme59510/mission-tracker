@@ -45,6 +45,11 @@ function normalizeOptionalNumeric(value: string | null | undefined) {
   return parsed;
 }
 
+function isMissingColumnError(message: string | undefined) {
+  const raw = (message ?? "").toLowerCase();
+  return raw.includes("column") && (raw.includes("does not exist") || raw.includes("not found"));
+}
+
 export async function createMissionAction(formData: FormData) {
   const { supabase, user } = await requireAdminSession();
 
@@ -73,28 +78,52 @@ export async function createMissionAction(formData: FormData) {
     throw new Error("L'email du consultant n'est pas valide.");
   }
 
-  const { data: mission, error: missionError } = await supabase
+  const basePayload = {
+    owner_id: user.id,
+    consultant_first_name: consultantFirstName,
+    consultant_last_name: consultantLastName,
+    consultant_type: consultantType,
+    consultant_email: consultantEmail,
+    client_name: clientName,
+    client_operational_contact: clientOperationalContact || null,
+    last_followup_date: lastFollowupDate || null,
+    next_followup_date: nextFollowupDate || null,
+    tjm,
+    cj,
+    // Keep DB compatibility (current column is NOT NULL) while client emails are handled manually.
+    client_contact_email: "manual-client-send@local.invalid",
+    start_date: startDate,
+    follow_up_frequency_days: Number.isFinite(frequency) && frequency > 0 ? frequency : 90,
+  };
+
+  let mission:
+    | {
+        id: string;
+      }
+    | null = null;
+  let missionError: Error | { message?: string } | null = null;
+
+  const insertWithCommercial = await supabase
     .from("missions")
     .insert({
-      owner_id: user.id,
-      consultant_first_name: consultantFirstName,
-      consultant_last_name: consultantLastName,
-      consultant_type: consultantType,
-      consultant_email: consultantEmail,
-      client_name: clientName,
+      ...basePayload,
       commercial,
-      client_operational_contact: clientOperationalContact || null,
-      last_followup_date: lastFollowupDate || null,
-      next_followup_date: nextFollowupDate || null,
-      tjm,
-      cj,
-      // Keep DB compatibility (current column is NOT NULL) while client emails are handled manually.
-      client_contact_email: "manual-client-send@local.invalid",
-      start_date: startDate,
-      follow_up_frequency_days: Number.isFinite(frequency) && frequency > 0 ? frequency : 90,
     })
     .select("id")
     .single();
+
+  if (insertWithCommercial.error && isMissingColumnError(insertWithCommercial.error.message)) {
+    const fallbackInsert = await supabase
+      .from("missions")
+      .insert(basePayload)
+      .select("id")
+      .single();
+    mission = fallbackInsert.data;
+    missionError = fallbackInsert.error;
+  } else {
+    mission = insertWithCommercial.data;
+    missionError = insertWithCommercial.error;
+  }
 
   if (missionError || !mission) {
     throw new Error(missionError?.message ?? "Erreur de creation de mission.");
