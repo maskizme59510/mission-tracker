@@ -236,18 +236,18 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <Link href="/missions" className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
           <p className="text-sm text-slate-500">Missions actives</p>
           <p className="mt-2 text-3xl font-semibold text-slate-900">{activeMissions ?? 0}</p>
-        </article>
+        </Link>
         <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-sm text-slate-500">CR en attente validation</p>
           <p className="mt-2 text-3xl font-semibold text-amber-600">{pendingValidations ?? 0}</p>
         </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <Link href="/dashboard/suivis-a-planifier" className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
           <p className="text-sm text-slate-500">Suivis a planifier</p>
           <p className={`mt-2 text-3xl font-semibold ${followupsToPlanClass}`}>{followupsToPlanCount}</p>
-        </article>
+        </Link>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

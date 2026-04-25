@@ -33,7 +33,7 @@ export default async function PrivateLayout({
               Dashboard
             </Link>
             <Link className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" href="/missions">
-              Missions
+              Mes Missions
             </Link>
             <form action="/api/auth/logout" method="post">
               <LoadingSubmitButton
