@@ -53,16 +53,12 @@ function getMissionDurationBadge(startDate: string): { label: string; classes: s
   return { label, classes: "bg-red-50 text-red-700 border-red-200" };
 }
 
-function getPlanningBadge(mission: MissionRow) {
+function getPlanningBadge(mission: MissionRow): { label: string; classes: string } | null {
   if (mission.next_followup_date) {
-    return { label: "🟢 Planifié", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    return null;
   }
 
-  const baselineDate = mission.latest_report_date ?? null;
-  if (!baselineDate) {
-    return { label: "🟠 A planifier", classes: "bg-amber-50 text-amber-700 border-amber-200" };
-  }
-
+  const baselineDate = mission.latest_report_date ?? mission.start_date;
   const baseline = new Date(`${baselineDate}T00:00:00`);
   const today = new Date();
   const msInDay = 24 * 60 * 60 * 1000;
@@ -73,11 +69,11 @@ function getPlanningBadge(mission: MissionRow) {
   const targetMonth = targetMonthRaw.charAt(0).toLocaleUpperCase("fr-FR") + targetMonthRaw.slice(1);
 
   if (elapsedDays > frequencyDays) {
-    return { label: `🔴 A planifier - ${targetMonth}`, classes: "bg-red-50 text-red-700 border-red-200" };
+    return { label: `A planifier - ${targetMonth}`, classes: "bg-red-50 text-red-700 border-red-200" };
   }
 
   return {
-    label: `🟠 A planifier - ${targetMonth}`,
+    label: `A planifier - ${targetMonth}`,
     classes: "bg-amber-50 text-amber-700 border-amber-200",
   };
 }
@@ -276,9 +272,11 @@ export default async function MissionsPage() {
                                 {marginBadge.label}
                               </span>
                             ) : null}
-                            <span className={`rounded-full border px-2 py-1 text-xs font-medium ${planningBadge.classes}`}>
-                              {planningBadge.label}
-                            </span>
+                            {planningBadge ? (
+                              <span className={`rounded-full border px-2 py-1 text-xs font-medium ${planningBadge.classes}`}>
+                                {planningBadge.label}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       );

@@ -60,11 +60,7 @@ function getPlanningBadge(mission: MissionAlertRow): AlertBadge | null {
     return null;
   }
 
-  const baselineDate = mission.latest_report_date ?? null;
-  if (!baselineDate) {
-    return { label: "🟠 A planifier", classes: "bg-amber-50 text-amber-700 border-amber-200", severity: "orange" };
-  }
-
+  const baselineDate = mission.latest_report_date ?? mission.start_date;
   const baseline = new Date(`${baselineDate}T00:00:00`);
   const today = new Date();
   const msInDay = 24 * 60 * 60 * 1000;
@@ -75,11 +71,11 @@ function getPlanningBadge(mission: MissionAlertRow): AlertBadge | null {
   const targetMonth = targetMonthRaw.charAt(0).toLocaleUpperCase("fr-FR") + targetMonthRaw.slice(1);
 
   if (elapsedDays > frequencyDays) {
-    return { label: `🔴 A planifier - ${targetMonth}`, classes: "bg-red-50 text-red-700 border-red-200", severity: "red" };
+    return { label: `A planifier - ${targetMonth}`, classes: "bg-red-50 text-red-700 border-red-200", severity: "red" };
   }
 
   return {
-    label: `🟠 A planifier - ${targetMonth}`,
+    label: `A planifier - ${targetMonth}`,
     classes: "bg-amber-50 text-amber-700 border-amber-200",
     severity: "orange",
   };
@@ -133,7 +129,6 @@ export default async function DashboardPage() {
   const [
     { count: activeMissions },
     { count: pendingValidations },
-    { count: overdueFollowups },
     { data: notifications },
     { data: healthRows, error: healthError },
     { data: marginsRows, error: marginsRowsError },
@@ -144,7 +139,6 @@ export default async function DashboardPage() {
         .from("mission_reports")
         .select("*", { count: "exact", head: true })
         .eq("status", "pending_consultant_validation"),
-      supabase.from("mission_health_view").select("*", { count: "exact", head: true }).eq("is_follow_up_overdue", true),
       supabase
         .from("admin_notifications")
         .select(
@@ -214,6 +208,13 @@ export default async function DashboardPage() {
       );
     });
 
+  const followupsToPlanCount = ((healthRows ?? []) as MissionAlertRow[]).filter((row) => getPlanningBadge(row) !== null).length;
+  const activeMissionsCount = activeMissions ?? 0;
+  const alertsPercentage = activeMissionsCount > 0 ? Math.round((alerts.length / activeMissionsCount) * 100) : 0;
+  const followupsToPlanRatio = activeMissionsCount > 0 ? (followupsToPlanCount / activeMissionsCount) * 100 : 0;
+  const followupsToPlanClass =
+    followupsToPlanRatio >= 30 ? "text-red-600" : followupsToPlanRatio >= 15 ? "text-amber-600" : "text-emerald-600";
+
   return (
     <section className="space-y-6">
       <div>
@@ -231,8 +232,8 @@ export default async function DashboardPage() {
           <p className="mt-2 text-3xl font-semibold text-amber-600">{pendingValidations ?? 0}</p>
         </article>
         <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-sm text-slate-500">Suivis en retard</p>
-          <p className="mt-2 text-3xl font-semibold text-red-600">{overdueFollowups ?? 0}</p>
+          <p className="text-sm text-slate-500">Suivis a planifier</p>
+          <p className={`mt-2 text-3xl font-semibold ${followupsToPlanClass}`}>{followupsToPlanCount}</p>
         </article>
       </div>
 
@@ -268,7 +269,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold text-slate-900">Alertes missions</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Alertes missions ({alertsPercentage}%)</h3>
         <p className="mt-1 text-sm text-slate-600">Affiche uniquement les missions avec alertes marge, duree ou suivi (orange/rouge).</p>
         {alerts.length === 0 ? (
           <p className="mt-3 text-sm text-slate-600">Aucune mission a afficher.</p>
