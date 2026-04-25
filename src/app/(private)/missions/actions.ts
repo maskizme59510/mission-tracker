@@ -85,6 +85,22 @@ export async function createMissionAction(formData: FormData) {
     throw new Error(missionError?.message ?? "Erreur de creation de mission.");
   }
 
+  const normalizedLastFollowupDate = normalizeOptionalDate(lastFollowupDate);
+  if (normalizedLastFollowupDate) {
+    const { error: reportError } = await supabase.from("mission_reports").insert({
+      mission_id: mission.id,
+      type: "followup",
+      report_date: normalizedLastFollowupDate,
+      last_followup_date: normalizedLastFollowupDate,
+      next_followup_date: normalizeOptionalDate(nextFollowupDate),
+      status: "draft",
+      created_by: user.id,
+    });
+    if (reportError) {
+      throw new Error(reportError.message);
+    }
+  }
+
   revalidatePath("/missions");
   redirect(`/missions/${mission.id}`);
 }

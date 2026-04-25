@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth";
 import { DeleteReportButton } from "@/components/delete-report-button";
+import { InlineReportStatusSelect } from "@/components/inline-report-status-select";
 import { MissionIdentityEditor, NextFollowupEditor } from "@/components/mission-detail-editors";
 import { toFrenchDate } from "@/lib/format";
 import { DeleteMissionButton } from "@/components/delete-mission-button";
@@ -37,14 +38,6 @@ type Report = {
   next_followup_date: string | null;
   status: "draft" | "pending_consultant_validation" | "validated" | "sent_to_client";
 };
-
-function statusMeta(status: Report["status"]) {
-  if (status === "draft") return { label: "Brouillon", classes: "bg-slate-100 text-slate-700 border-slate-300" };
-  if (status === "pending_consultant_validation")
-    return { label: "Envoye consultant", classes: "bg-orange-50 text-orange-700 border-orange-200" };
-  if (status === "validated") return { label: "Valide consultant", classes: "bg-blue-50 text-blue-700 border-blue-200" };
-  return { label: "Transmis au client", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-}
 
 function missionDurationLabel(startDate: string) {
   const start = new Date(startDate);
@@ -202,9 +195,11 @@ export default async function MissionDetailPage({
                   {toReportHistoryLabel(report.report_date, typedMission)}
                 </Link>
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-full border px-2 py-1 text-xs font-medium ${statusMeta(report.status).classes}`}>
-                    {statusMeta(report.status).label}
-                  </span>
+                  <InlineReportStatusSelect
+                    reportId={report.id}
+                    missionId={typedMission.id}
+                    initialStatus={report.status}
+                  />
                   <Link href={`/reports/${report.id}/edit`} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100">
                     Editer
                   </Link>
