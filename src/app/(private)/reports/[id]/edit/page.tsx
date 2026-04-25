@@ -71,7 +71,7 @@ export default async function EditReportPage({
     .from("mission_reports")
     .select("report_date")
     .eq("mission_id", typedReport.mission_id)
-    .neq("id", typedReport.id)
+    .lt("report_date", typedReport.report_date)
     .order("report_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(1)
@@ -147,7 +147,7 @@ export default async function EditReportPage({
               <input
                 name="last_followup_date"
                 type="date"
-                defaultValue={typedReport.last_followup_date ?? previousReport?.report_date ?? ""}
+                defaultValue={previousReport?.report_date ?? ""}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
               />
             </label>

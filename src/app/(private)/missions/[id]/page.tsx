@@ -63,6 +63,13 @@ function missionDurationLabel(startDate: string) {
   return `En mission depuis ${years} an(s) et ${months} mois`;
 }
 
+function toReportHistoryLabel(reportDate: string, mission: Mission) {
+  const clientToken = mission.client_name.trim().toLocaleUpperCase("fr-FR").replace(/\s+/g, "_");
+  const consultantFirstName = mission.consultant_first_name.trim();
+  const consultantLastInitial = (mission.consultant_last_name.trim().charAt(0) || "").toLocaleUpperCase("fr-FR");
+  return `CR_${clientToken}_${consultantFirstName} ${consultantLastInitial}_${toFrenchDate(reportDate)}`;
+}
+
 export default async function MissionDetailPage({
   params,
   searchParams,
@@ -92,9 +99,8 @@ export default async function MissionDetailPage({
   const typedMission = mission as Mission;
   const typedReports = (reports ?? []) as Report[];
 
-  const lastValidatedReport = typedReports.find((report) => report.status === "validated" || report.status === "sent_to_client");
-  const lastFollowupDisplayDate = lastValidatedReport?.report_date ?? typedMission.last_followup_date ?? null;
   const latestReport = typedReports[0] ?? null;
+  const lastFollowupDisplayDate = latestReport?.report_date ?? null;
   const nextPlannedDate =
     latestReport !== null
       ? (latestReport.next_followup_date ?? null)
@@ -193,7 +199,7 @@ export default async function MissionDetailPage({
                   href={`/reports/${report.id}/edit`}
                   className="text-sm text-slate-800 underline-offset-2 hover:underline"
                 >
-                  {report.type === "kickoff" ? "CR Demarrage" : "CR Suivi"} - {toFrenchDate(report.report_date)}
+                  {toReportHistoryLabel(report.report_date, typedMission)}
                 </Link>
                 <div className="flex items-center gap-2">
                   <span className={`rounded-full border px-2 py-1 text-xs font-medium ${statusMeta(report.status).classes}`}>
