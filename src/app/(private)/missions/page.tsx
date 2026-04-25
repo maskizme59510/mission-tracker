@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminSession } from "@/lib/auth";
 import { toFrenchDate } from "@/lib/format";
 import { createMissionAction } from "@/app/(private)/missions/actions";
+import { ConsultantContactFields } from "@/components/consultant-contact-fields";
 import { UppercaseInput } from "@/components/uppercase-input";
 
 type MissionRow = {
@@ -78,29 +79,7 @@ export default async function MissionsPage() {
       <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">Nouvelle mission</h3>
         <form action={createMissionAction} className="mt-4 grid gap-3 md:grid-cols-2">
-          <input name="consultant_first_name" required placeholder="Prenom consultant" className="rounded-md border border-slate-300 px-3 py-2" />
-          <UppercaseInput
-            name="consultant_last_name"
-            required
-            placeholder="Nom consultant"
-            className="rounded-md border border-slate-300 px-3 py-2"
-          />
-          <label className="text-sm text-slate-700 md:col-span-2">
-            Type de consultant
-            <select
-              name="consultant_type"
-              required
-              defaultValue=""
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            >
-              <option value="" disabled>
-                Selectionner un type
-              </option>
-              <option value="Consultant Interne">Consultant Interne</option>
-              <option value="Consultant Externe">Consultant Externe</option>
-            </select>
-          </label>
-          <input name="consultant_email" type="email" required placeholder="Email consultant" className="rounded-md border border-slate-300 px-3 py-2" />
+          <ConsultantContactFields />
           <UppercaseInput
             name="client_name"
             required

@@ -94,10 +94,7 @@ export default async function MissionDetailPage({
 
   const latestReport = typedReports[0] ?? null;
   const lastFollowupDisplayDate = latestReport?.report_date ?? null;
-  const nextPlannedDate =
-    latestReport !== null
-      ? (latestReport.next_followup_date ?? null)
-      : (typedMission.next_followup_date ?? null);
+  const nextPlannedDate = typedMission.next_followup_date ?? (latestReport?.next_followup_date ?? null);
 
   return (
     <section className="space-y-6">

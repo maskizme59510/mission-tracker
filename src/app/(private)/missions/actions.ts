@@ -257,7 +257,7 @@ export async function updateMissionIdentityAction(formData: FormData) {
 export async function updateMissionNextFollowupAction(formData: FormData) {
   const { supabase } = await requireAdminSession();
   const missionId = String(formData.get("mission_id") ?? "");
-  const nextFollowupDate = String(formData.get("next_followup_date") ?? "").trim();
+  const nextFollowupDate = normalizeOptionalDate(String(formData.get("next_followup_date") ?? ""));
 
   if (!missionId) {
     throw new Error("mission_id obligatoire.");
@@ -265,7 +265,7 @@ export async function updateMissionNextFollowupAction(formData: FormData) {
 
   const { error } = await supabase
     .from("missions")
-    .update({ next_followup_date: nextFollowupDate || null })
+    .update({ next_followup_date: nextFollowupDate })
     .eq("id", missionId);
 
   if (error) {
