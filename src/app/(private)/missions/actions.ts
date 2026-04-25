@@ -217,6 +217,8 @@ export async function updateMissionIdentityAction(formData: FormData) {
   const clientName = normalizeClientName(String(formData.get("client_name") ?? ""));
   const clientOperationalContact = String(formData.get("client_operational_contact") ?? "").trim();
   const startDate = String(formData.get("start_date") ?? "").trim();
+  const hasLastFollowupDate = formData.has("last_followup_date");
+  const hasNextFollowupDate = formData.has("next_followup_date");
   const lastFollowupDate = String(formData.get("last_followup_date") ?? "").trim();
   const nextFollowupDate = String(formData.get("next_followup_date") ?? "").trim();
   const tjm = normalizeOptionalNumeric(String(formData.get("tjm") ?? ""));

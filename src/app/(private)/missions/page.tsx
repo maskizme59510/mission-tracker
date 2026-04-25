@@ -29,6 +29,33 @@ type MissionMarginRow = {
   consultant_type: string;
 };
 
+function getMissionDurationBadge(startDate: string) {
+  const start = new Date(startDate);
+  const now = new Date();
+  const elapsedMonths = Math.max(
+    0,
+    (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()),
+  );
+
+  let label = "3ans";
+  if (elapsedMonths < 36) {
+    label = `3ans-${36 - elapsedMonths}mois`;
+  } else if (elapsedMonths > 36) {
+    label = `3ans+${elapsedMonths - 36}mois`;
+  }
+
+  if (elapsedMonths < 30) {
+    return { label, classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  }
+  if (elapsedMonths <= 35) {
+    return { label, classes: "bg-amber-50 text-amber-700 border-amber-200" };
+  }
+  if (elapsedMonths <= 41) {
+    return { label, classes: "bg-yellow-50 text-yellow-700 border-yellow-200" };
+  }
+  return { label, classes: "bg-red-50 text-red-700 border-red-200" };
+}
+
 function getPlanningBadge(mission: MissionRow) {
   if (mission.next_followup_date) {
     return { label: "🟢 Planifie", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
@@ -44,14 +71,13 @@ function getPlanningBadge(mission: MissionRow) {
   const msInDay = 24 * 60 * 60 * 1000;
   const elapsedDays = Math.floor((today.getTime() - baseline.getTime()) / msInDay);
   const frequencyDays = mission.follow_up_frequency_days > 0 ? mission.follow_up_frequency_days : 90;
-
-  if (elapsedDays > frequencyDays) {
-    return { label: "🔴 A planifier", classes: "bg-red-50 text-red-700 border-red-200" };
-  }
-
   const targetDate = new Date(baseline.getTime() + frequencyDays * msInDay);
   const targetMonthRaw = targetDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
   const targetMonth = targetMonthRaw.charAt(0).toLocaleUpperCase("fr-FR") + targetMonthRaw.slice(1);
+
+  if (elapsedDays > frequencyDays) {
+    return { label: `🔴 A planifier - ${targetMonth}`, classes: "bg-red-50 text-red-700 border-red-200" };
+  }
 
   return {
     label: `🟠 A planifier - ${targetMonth}`,
@@ -228,6 +254,7 @@ export default async function MissionsPage() {
                       );
                     })
                     .map((mission) => {
+                      const durationBadge = getMissionDurationBadge(mission.start_date);
                       const planningBadge = getPlanningBadge(mission);
                       const marginBadge = getMarginBadge(mission.mission_id);
                       return (
@@ -242,6 +269,9 @@ export default async function MissionsPage() {
                             <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
                           </div>
                           <div className="flex items-center gap-2">
+                            <span className={`rounded-full border px-2 py-1 text-xs font-medium ${durationBadge.classes}`}>
+                              {durationBadge.label}
+                            </span>
                             {marginBadge ? (
                               <span className={`rounded-full border px-2 py-1 text-xs font-medium ${marginBadge.classes}`}>
                                 {marginBadge.label}
