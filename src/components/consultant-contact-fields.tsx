@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CapitalizeInput } from "@/components/capitalize-input";
 
 function slugPart(value: string) {
   return value
@@ -30,14 +31,13 @@ export function ConsultantContactFields() {
 
   return (
     <>
-      <input
+      <CapitalizeInput
         name="consultant_first_name"
         required
         placeholder="Prenom consultant"
         className="rounded-md border border-slate-300 px-3 py-2"
-        value={consultantFirstName}
-        onChange={(event) => {
-          const next = event.currentTarget.value;
+        defaultValue={consultantFirstName}
+        onValueChange={(next) => {
           setConsultantFirstName(next);
           if (consultantType === "Consultant Interne" && canAutoOverride) {
             const autoEmail = computeInternalEmail(next, consultantLastName);

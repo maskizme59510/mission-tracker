@@ -17,6 +17,17 @@ function normalizeConsultantLastName(value: string) {
   return value.trim().toLocaleUpperCase("fr-FR");
 }
 
+function normalizeConsultantFirstName(value: string) {
+  return value
+    .trim()
+    .split("-")
+    .map((segment) => {
+      if (!segment) return "";
+      return segment.charAt(0).toLocaleUpperCase("fr-FR") + segment.slice(1).toLocaleLowerCase("fr-FR");
+    })
+    .join("-");
+}
+
 function normalizeOptionalDate(value: string | null | undefined) {
   const trimmed = (value ?? "").trim();
   if (!trimmed) return null;
@@ -36,7 +47,7 @@ function normalizeOptionalNumeric(value: string | null | undefined) {
 export async function createMissionAction(formData: FormData) {
   const { supabase, user } = await requireAdminSession();
 
-  const consultantFirstName = String(formData.get("consultant_first_name") ?? "").trim();
+  const consultantFirstName = normalizeConsultantFirstName(String(formData.get("consultant_first_name") ?? ""));
   const consultantLastName = normalizeConsultantLastName(String(formData.get("consultant_last_name") ?? ""));
   const consultantType = String(formData.get("consultant_type") ?? "").trim();
   const consultantEmail = String(formData.get("consultant_email") ?? "").trim();
@@ -199,7 +210,7 @@ export async function deleteReportAction(formData: FormData) {
 export async function updateMissionIdentityAction(formData: FormData) {
   const { supabase } = await requireAdminSession();
   const missionId = String(formData.get("mission_id") ?? "");
-  const consultantFirstName = String(formData.get("consultant_first_name") ?? "").trim();
+  const consultantFirstName = normalizeConsultantFirstName(String(formData.get("consultant_first_name") ?? ""));
   const consultantLastName = normalizeConsultantLastName(String(formData.get("consultant_last_name") ?? ""));
   const consultantType = String(formData.get("consultant_type") ?? "").trim();
   const consultantEmail = String(formData.get("consultant_email") ?? "").trim();

@@ -21,12 +21,18 @@ type MissionRow = {
   health_color: "red" | "yellow" | "green" | null;
 };
 
+type MissionMarginRow = {
+  id: string;
+  tjm: number | null;
+  cj: number | null;
+};
+
 function getPlanningBadge(mission: MissionRow) {
   if (mission.next_followup_date) {
     return { label: "🟢 Planifie", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
   }
 
-  const baselineDate = mission.latest_report_date ?? mission.start_date ?? null;
+  const baselineDate = mission.latest_report_date ?? null;
   if (!baselineDate) {
     return { label: "🟠 A planifier", classes: "bg-amber-50 text-amber-700 border-amber-200" };
   }
@@ -41,7 +47,14 @@ function getPlanningBadge(mission: MissionRow) {
     return { label: "🔴 A planifier", classes: "bg-red-50 text-red-700 border-red-200" };
   }
 
-  return { label: "🟠 A planifier", classes: "bg-amber-50 text-amber-700 border-amber-200" };
+  const targetDate = new Date(baseline.getTime() + frequencyDays * msInDay);
+  const targetMonthRaw = targetDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const targetMonth = targetMonthRaw.charAt(0).toLocaleUpperCase("fr-FR") + targetMonthRaw.slice(1);
+
+  return {
+    label: `🟠 A planifier - ${targetMonth}`,
+    classes: "bg-amber-50 text-amber-700 border-amber-200",
+  };
 }
 
 export default async function MissionsPage() {
@@ -55,7 +68,17 @@ export default async function MissionsPage() {
     throw new Error(error.message);
   }
 
+  const missionIds = (data ?? []).map((row) => String((row as { mission_id: string }).mission_id));
+  const { data: marginsData, error: marginsError } = await supabase
+    .from("missions")
+    .select("id,tjm,cj")
+    .in("id", missionIds);
+  if (marginsError) {
+    throw new Error(marginsError.message);
+  }
+
   const missions = (data ?? []) as MissionRow[];
+  const marginsByMissionId = new Map<string, MissionMarginRow>((marginsData ?? []).map((item) => [item.id, item as MissionMarginRow]));
   const missionsByClient = missions.reduce<Record<string, MissionRow[]>>((accumulator, mission) => {
     const key = mission.client_name || "Enseigne non renseignee";
     if (!accumulator[key]) {
@@ -66,6 +89,23 @@ export default async function MissionsPage() {
   }, {});
 
   const sortedClientNames = Object.keys(missionsByClient).sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+
+  function getMarginBadge(missionId: string) {
+    const row = marginsByMissionId.get(missionId);
+    if (!row || row.tjm === null || row.cj === null || row.tjm <= 0) return null;
+
+    const marginPercent = ((row.tjm - row.cj) / row.tjm) * 100;
+    const rounded = Math.round(marginPercent * 10) / 10;
+    const label = `${rounded.toFixed(1)}%`;
+
+    if (rounded < 20) {
+      return { label, classes: "bg-red-50 text-red-700 border-red-200" };
+    }
+    if (rounded < 30) {
+      return { label, classes: "bg-amber-50 text-amber-700 border-amber-200" };
+    }
+    return { label, classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  }
 
   return (
     <section className="space-y-6">
@@ -164,7 +204,9 @@ export default async function MissionsPage() {
             {sortedClientNames.map((clientName) => (
               <div key={clientName} className="rounded-lg border border-slate-200">
                 <div className="border-b border-slate-200 bg-slate-50 px-4 py-2">
-                  <p className="text-sm font-semibold text-slate-900">{clientName}</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {clientName} ({missionsByClient[clientName].length})
+                  </p>
                 </div>
                 <div className="space-y-2 p-3">
                   {missionsByClient[clientName]
@@ -178,6 +220,7 @@ export default async function MissionsPage() {
                     )
                     .map((mission) => {
                       const planningBadge = getPlanningBadge(mission);
+                      const marginBadge = getMarginBadge(mission.mission_id);
                       return (
                         <div key={mission.mission_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
                           <div>
@@ -190,6 +233,11 @@ export default async function MissionsPage() {
                             <p className="text-sm text-slate-600">Prochain suivi : {toFrenchDate(mission.next_followup_date)}</p>
                           </div>
                           <div className="flex items-center gap-2">
+                            {marginBadge ? (
+                              <span className={`rounded-full border px-2 py-1 text-xs font-medium ${marginBadge.classes}`}>
+                                {marginBadge.label}
+                              </span>
+                            ) : null}
                             <span className={`rounded-full border px-2 py-1 text-xs font-medium ${planningBadge.classes}`}>
                               {planningBadge.label}
                             </span>

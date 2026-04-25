@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CapitalizeInput } from "@/components/capitalize-input";
 import { UppercaseInput } from "@/components/uppercase-input";
 
 type MissionIdentityEditorProps = {
@@ -67,7 +68,7 @@ export function MissionIdentityEditor({
       <input type="hidden" name="mission_id" value={missionId} />
       <input type="hidden" name="existing_follow_up_frequency_days" value={initialFollowUpFrequencyDays} />
       <div className="grid gap-2 md:grid-cols-2">
-        <input
+        <CapitalizeInput
           name="consultant_first_name"
           defaultValue={initialConsultantFirstName}
           required
