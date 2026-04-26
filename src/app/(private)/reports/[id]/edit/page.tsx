@@ -123,12 +123,20 @@ export default async function EditReportPage({
             Modifie par le consultant le {toFrenchDate(typedReport.consultant_last_edited_at)}
           </p>
         ) : null}
-        <a
-          href={`/api/reports/${typedReport.id}/pdf`}
-          className="mt-3 inline-block rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-        >
-          Exporter en PDF
-        </a>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a
+            href={`/api/reports/${typedReport.id}/pdf`}
+            className="inline-block rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+          >
+            Exporter en PDF
+          </a>
+          <a
+            href={`/api/reports/${typedReport.id}/docx`}
+            className="inline-block rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+          >
+            Exporter en Word
+          </a>
+        </div>
       </article>
 
       <form action={updateReportAction} className="space-y-5">
