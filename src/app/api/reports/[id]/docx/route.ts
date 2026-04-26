@@ -1,65 +1,69 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import JSZip from "jszip";
+import {
+  AlignmentType,
+  Document,
+  Header,
+  ImageRun,
+  Packer,
+  Paragraph,
+  Table,
+  TableBorders,
+  TableCell,
+  TableRow,
+  TextRun,
+  VerticalAlignTable,
+  WidthType,
+  convertInchesToTwip,
+} from "docx";
 import { requireAdminSession } from "@/lib/auth";
 import { buildCrExportFileName } from "@/lib/cr-export-filename";
 import { toFrenchDate } from "@/lib/format";
 
 type SectionType = "consultant_feedback" | "client_feedback" | "next_objectives" | "training";
 
-const PLACEHOLDER = "{{REPORT_CONTENT}}";
+/** docx attend largeur/hauteur en pixels (conversion interne 96 dpi). */
+const LOGO_WIDTH_PX = 154;
+const LOGO_HEIGHT_PX = 53;
 
-function escapeXml(text: string) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+function normalizeListLine(value: string) {
+  return value.replace(/^\s*[-•–—]\s*/, "").trim();
 }
 
-function wParagraph(text: string, bold: boolean) {
-  const run = bold
-    ? `<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`
-    : `<w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
-  return `<w:p>${run}</w:p>`;
+function listItemParagraph(text: string) {
+  const line = normalizeListLine(text);
+  return new Paragraph({
+    children: [new TextRun(`- ${line}`)],
+    spacing: { after: 80 },
+  });
 }
 
-function wBlankParagraph() {
-  return `<w:p/>`;
+function sectionTitleParagraph(text: string) {
+  return new Paragraph({
+    children: [new TextRun({ text, bold: true })],
+    spacing: { before: 240, after: 120 },
+  });
 }
 
-function findPlaceholderParagraphRange(documentXml: string): { start: number; end: number } {
-  const idx = documentXml.indexOf(PLACEHOLDER);
-  if (idx !== -1) {
-    const pStart = documentXml.lastIndexOf("<w:p", idx);
-    const pEnd = documentXml.indexOf("</w:p>", idx);
-    if (pStart !== -1 && pEnd !== -1) {
-      return { start: pStart, end: pEnd + "</w:p>".length };
-    }
-  }
-
-  const pRegex = /<w:p\b[\s\S]*?<\/w:p>/g;
-  let m: RegExpExecArray | null;
-  while ((m = pRegex.exec(documentXml)) !== null) {
-    const block = m[0];
-    const innerTexts = [...block.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)].map((x) => x[1]);
-    const flat = innerTexts.join("");
-    if (flat.includes("{{REPORT_CONTENT}}")) {
-      return { start: m.index, end: m.index + block.length };
-    }
-  }
-
-  throw new Error(`Le template doit contenir le marqueur ${PLACEHOLDER} dans word/document.xml.`);
+function bodyParagraph(text: string, options?: { bold?: boolean; title?: boolean }) {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text,
+        bold: options?.bold ?? false,
+        size: options?.title ? 32 : undefined,
+      }),
+    ],
+    spacing: { after: 120 },
+  });
 }
 
-function replacePlaceholderParagraph(documentXml: string, injectedXml: string) {
-  const { start, end } = findPlaceholderParagraphRange(documentXml);
-  return documentXml.slice(0, start) + injectedXml + documentXml.slice(end);
+function sectionGap() {
+  return new Paragraph({ text: "", spacing: { after: 120 } });
 }
 
-function buildReportBodyXml(input: {
+function buildBodyChildren(input: {
   consultantFullName: string;
   missionStartDate: string;
   lastFollowupDate: string | null;
@@ -72,75 +76,122 @@ function buildReportBodyXml(input: {
   clientFeedback: string[];
   objectives: string[];
   training: string[];
-}) {
-  const parts: string[] = [];
+}): Paragraph[] {
+  const out: Paragraph[] = [];
 
-  const pushSectionGap = () => {
-    parts.push(wBlankParagraph());
-  };
+  out.push(bodyParagraph(`Suivi de mission : ${input.consultantFullName}`, { bold: true, title: true }));
+  out.push(bodyParagraph(`Démarrage : ${toFrenchDate(input.missionStartDate)}`));
+  out.push(bodyParagraph(`Dernier suivi de mission : ${toFrenchDate(input.lastFollowupDate)}`));
+  out.push(bodyParagraph(`Date suivi de mission : ${toFrenchDate(input.reportDate)}`));
+  out.push(bodyParagraph(`Prochain suivi de mission planifié le : ${toFrenchDate(input.nextFollowupDate)}`));
 
-  parts.push(wParagraph(`Suivi de mission : ${input.consultantFullName}`, true));
-  parts.push(wParagraph(`Démarrage : ${toFrenchDate(input.missionStartDate)}`, false));
-  parts.push(wParagraph(`Dernier suivi de mission : ${toFrenchDate(input.lastFollowupDate)}`, false));
-  parts.push(wParagraph(`Date suivi de mission : ${toFrenchDate(input.reportDate)}`, false));
-  parts.push(wParagraph(`Prochain suivi de mission planifié le : ${toFrenchDate(input.nextFollowupDate)}`, false));
-
-  pushSectionGap();
-
-  parts.push(wParagraph("Présents :", true));
+  out.push(sectionGap());
+  out.push(sectionTitleParagraph("Présents :"));
   if (input.participants.length === 0) {
-    parts.push(wParagraph("- (Aucun point)", false));
+    out.push(listItemParagraph("(Aucun point)"));
   } else {
     for (const name of input.participants) {
-      parts.push(wParagraph(`- ${name}`, false));
+      out.push(listItemParagraph(name));
     }
   }
 
-  pushSectionGap();
-
-  parts.push(wParagraph(`Retours de ${input.consultantFirstName} :`, true));
+  out.push(sectionGap());
+  out.push(sectionTitleParagraph(`Retours de ${input.consultantFirstName} :`));
   if (input.consultantFeedback.length === 0) {
-    parts.push(wParagraph("- (Aucun point)", false));
+    out.push(listItemParagraph("(Aucun point)"));
   } else {
     for (const line of input.consultantFeedback) {
-      parts.push(wParagraph(`- ${line}`, false));
+      out.push(listItemParagraph(line));
     }
   }
 
-  pushSectionGap();
-
-  parts.push(wParagraph(`Retours ${input.clientName} :`, true));
+  out.push(sectionGap());
+  out.push(sectionTitleParagraph(`Retours ${input.clientName} :`));
   if (input.clientFeedback.length === 0) {
-    parts.push(wParagraph("- (Aucun point)", false));
+    out.push(listItemParagraph("(Aucun point)"));
   } else {
     for (const line of input.clientFeedback) {
-      parts.push(wParagraph(`- ${line}`, false));
+      out.push(listItemParagraph(line));
     }
   }
 
-  pushSectionGap();
-
-  parts.push(wParagraph("Objectifs pour la prochaine période :", true));
+  out.push(sectionGap());
+  out.push(sectionTitleParagraph("Objectifs pour la prochaine période :"));
   if (input.objectives.length === 0) {
-    parts.push(wParagraph("- (Aucun point)", false));
+    out.push(listItemParagraph("(Aucun point)"));
   } else {
     for (const line of input.objectives) {
-      parts.push(wParagraph(`- ${line}`, false));
+      out.push(listItemParagraph(line));
     }
   }
 
-  pushSectionGap();
-
-  parts.push(wParagraph("Formation à envisager :", true));
+  out.push(sectionGap());
+  out.push(sectionTitleParagraph("Formation à envisager :"));
   if (input.training.length === 0) {
-    parts.push(wParagraph("- (Aucun point)", false));
+    out.push(listItemParagraph("(Aucun point)"));
   } else {
     for (const line of input.training) {
-      parts.push(wParagraph(`- ${line}`, false));
+      out.push(listItemParagraph(line));
     }
   }
 
-  return parts.join("");
+  return out;
+}
+
+async function buildHeader(): Promise<Header> {
+  const logoPath = path.join(process.cwd(), "public", "logo-ntico.png");
+  let logoBuffer: Buffer | null = null;
+  try {
+    logoBuffer = await readFile(logoPath);
+  } catch {
+    logoBuffer = null;
+  }
+
+  const titleParagraph = new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    children: [new TextRun({ text: "Compte Rendu de mission", bold: true, size: 32 })],
+  });
+
+  if (!logoBuffer) {
+    return new Header({
+      children: [titleParagraph],
+    });
+  }
+
+  const headerTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    columnWidths: [4500, 5500],
+    borders: TableBorders.NONE,
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            verticalAlign: VerticalAlignTable.CENTER,
+            margins: { top: 80, bottom: 80, left: 0, right: 160 },
+            children: [
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    type: "png",
+                    data: logoBuffer,
+                    transformation: { width: LOGO_WIDTH_PX, height: LOGO_HEIGHT_PX },
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            verticalAlign: VerticalAlignTable.CENTER,
+            children: [titleParagraph],
+          }),
+        ],
+      }),
+    ],
+  });
+
+  return new Header({
+    children: [headerTable],
+  });
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -191,43 +242,44 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const consultantFullName = `${mission.consultant_first_name} ${mission.consultant_last_name}`;
   const participants = (participantsData ?? []).map((p) => p.name);
 
-  const templatePath = path.join(process.cwd(), "public", "Template_CR_de_mission.docx");
-  const templateBuffer = await readFile(templatePath);
+  const header = await buildHeader();
 
-  const zip = await JSZip.loadAsync(templateBuffer);
-  const documentEntry = zip.file("word/document.xml");
-  if (!documentEntry) {
-    return NextResponse.json({ error: "Template Word invalide (document.xml manquant)." }, { status: 500 });
-  }
-
-  let documentXml = await documentEntry.async("string");
-
-  const bodyXml = buildReportBodyXml({
-    consultantFullName,
-    missionStartDate: mission.start_date,
-    lastFollowupDate: report.last_followup_date,
-    reportDate: report.report_date,
-    nextFollowupDate: report.next_followup_date,
-    participants,
-    consultantFirstName: mission.consultant_first_name,
-    clientName: mission.client_name,
-    consultantFeedback: sectionMap.consultant_feedback,
-    clientFeedback: sectionMap.client_feedback,
-    objectives: sectionMap.next_objectives,
-    training: sectionMap.training,
+  const doc = new Document({
+    sections: [
+      {
+        headers: { default: header },
+        properties: {
+          page: {
+            size: { width: 11906, height: 16838 },
+            margin: {
+              top: convertInchesToTwip(1),
+              right: convertInchesToTwip(1),
+              bottom: convertInchesToTwip(1),
+              left: convertInchesToTwip(1),
+              header: convertInchesToTwip(0.55),
+              footer: convertInchesToTwip(0.45),
+            },
+          },
+        },
+        children: buildBodyChildren({
+          consultantFullName,
+          missionStartDate: mission.start_date,
+          lastFollowupDate: report.last_followup_date,
+          reportDate: report.report_date,
+          nextFollowupDate: report.next_followup_date,
+          participants,
+          consultantFirstName: mission.consultant_first_name,
+          clientName: mission.client_name,
+          consultantFeedback: sectionMap.consultant_feedback,
+          clientFeedback: sectionMap.client_feedback,
+          objectives: sectionMap.next_objectives,
+          training: sectionMap.training,
+        }),
+      },
+    ],
   });
 
-  try {
-    documentXml = replacePlaceholderParagraph(documentXml, bodyXml);
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "Erreur template Word.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-
-  zip.file("word/document.xml", documentXml);
-
-  const docxBuffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
-
+  const docxBuffer = await Packer.toBuffer(doc);
   const outputFileName = buildCrExportFileName(mission.client_name, mission.consultant_first_name, report.report_date, "docx");
 
   return new NextResponse(new Uint8Array(docxBuffer), {

@@ -14,11 +14,15 @@ type ReportTemplateInput = {
   engineerFirstName: string;
 };
 
+function normalizeListLine(value: string) {
+  return value.replace(/^\s*[-•–—]\s*/, "").trim();
+}
+
 function lines(title: string, values: string[]) {
   if (values.length === 0) {
     return `${title}\n- (Aucun point)`;
   }
-  return `${title}\n${values.map((value) => `- ${value}`).join("\n")}`;
+  return `${title}\n${values.map((value) => `- ${normalizeListLine(value)}`).join("\n")}`;
 }
 
 export function buildEmailIntro(input: ReportTemplateInput) {

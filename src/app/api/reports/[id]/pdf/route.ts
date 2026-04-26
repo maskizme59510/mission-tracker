@@ -90,11 +90,6 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  const generatedAt = new Intl.DateTimeFormat("fr-FR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date());
-
   let y = 800;
   const lineHeight = 16;
   const marginX = 50;
@@ -108,28 +103,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     color: rgb(0.08, 0.12, 0.2),
   });
 
-  page.drawText("MISSION TRACKER", {
+  page.drawText("Compte Rendu de mission", {
     x: marginX,
-    y: 814,
-    size: 10,
-    font: boldFont,
-    color: rgb(0.9, 0.93, 0.99),
-  });
-
-  page.drawText("Compte-rendu de mission", {
-    x: marginX,
-    y: 792,
+    y: 800,
     size: 18,
     font: boldFont,
     color: rgb(1, 1, 1),
-  });
-
-  page.drawText(`Genere le ${generatedAt}`, {
-    x: marginX,
-    y: 776,
-    size: 10,
-    font,
-    color: rgb(0.87, 0.9, 0.96),
   });
   y = 748;
 
