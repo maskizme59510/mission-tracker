@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/auth";
+import { buildCrExportFileName } from "@/lib/cr-export-filename";
 import { buildReportBody } from "@/lib/report-template";
 
 type SectionType = "consultant_feedback" | "client_feedback" | "next_objectives" | "training";
@@ -156,10 +157,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   const pdfBytes = await pdfDoc.save();
 
+  const outputFileName = buildCrExportFileName(mission.client_name, mission.consultant_first_name, report.report_date, "pdf");
+
   return new NextResponse(new Uint8Array(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="cr-mission-${report.id}.pdf"`,
+      "Content-Disposition": `attachment; filename="${outputFileName}"`,
       "Cache-Control": "no-store",
     },
   });
